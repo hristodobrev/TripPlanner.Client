@@ -1,0 +1,116 @@
+<main class="app-shell">
+  <section class="intro" aria-labelledby="page-title">
+    <div class="intro__copy">
+      <p class="eyebrow">TripPlanner</p>
+      <h1 id="page-title">Build a trip that keeps the whole route in view.</h1>
+      <p>
+        Pick the dates, mark the stops, and keep the next decision clear while your itinerary
+        takes shape.
+      </p>
+    </div>
+
+    <form class="trip-form" [formGroup]="tripForm" (ngSubmit)="submitTrip()" aria-label="Add trip">
+      <div class="destination-field">
+        <label for="destination">Destination</label>
+        <input
+          id="destination"
+          type="text"
+          formControlName="destination"
+          placeholder="Where are you going?"
+          autocomplete="off"
+        />
+
+        @if (isSearchingPlaces()) {
+          <p class="places-status">Searching places...</p>
+        }
+
+        @if (placeOptions().length > 0) {
+          <ul class="places-list" aria-label="Destination suggestions">
+            @for (place of placeOptions(); track trackPlace($index, place)) {
+              <li>
+                <button type="button" (click)="selectPlace(place)">
+                  <strong>{{ place.mainText }}</strong>
+                  @if (place.secondaryText) {
+                    <span>{{ place.secondaryText }}</span>
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (tripForm.controls.destination.touched && !selectedPlace()) {
+          <span class="field-error">Choose a destination from the list.</span>
+        }
+      </div>
+
+      <div class="trip-form__row">
+        <label>
+          Start date
+          <input type="date" formControlName="startDate" />
+          @if (tripForm.controls.startDate.touched && tripForm.controls.startDate.invalid) {
+            <span class="field-error">Start date is required.</span>
+          }
+        </label>
+        <label>
+          End date
+          <input type="date" formControlName="endDate" />
+          @if (tripForm.controls.endDate.touched && tripForm.controls.endDate.invalid) {
+            <span class="field-error">End date is required.</span>
+          }
+        </label>
+      </div>
+
+      <label>
+        Description
+        <textarea
+          formControlName="description"
+          placeholder="Add notes, plans, or reminders."
+          rows="4"
+        ></textarea>
+      </label>
+
+      <button type="submit" [disabled]="isSubmittingTrip()">
+        {{ isSubmittingTrip() ? 'Adding trip...' : 'Add trip' }}
+      </button>
+
+      @if (formMessage()) {
+        <p class="form-message">{{ formMessage() }}</p>
+      }
+    </form>
+  </section>
+
+  <section class="stats" aria-label="Planning highlights">
+    <article>
+      <span>4</span>
+      planning modes
+    </article>
+    <article>
+      <span>18</span>
+      saved ideas
+    </article>
+    <article>
+      <span>7d</span>
+      sample route
+    </article>
+  </section>
+
+  <section class="ideas" aria-labelledby="ideas-title">
+    <div>
+      <p class="eyebrow">Ideas</p>
+      <h2 id="ideas-title">Trips ready for the first draft</h2>
+    </div>
+
+    <div class="idea-grid">
+      @for (idea of tripIdeas; track idea.city) {
+        <article class="idea-card">
+          <img [src]="idea.image" [alt]="idea.city + ' travel view'" />
+          <div>
+            <h3>{{ idea.city }}</h3>
+            <p>{{ idea.detail }}</p>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+</main>

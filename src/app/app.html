@@ -1,0 +1,17 @@
+<header class="topbar">
+  <a class="brand" routerLink="/">TripPlanner</a>
+
+  <nav aria-label="Primary navigation">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Home</a>
+
+    @if (currentUser(); as user) {
+      <span class="user-chip">{{ user.firstName }} {{ user.lastName }}</span>
+      <button type="button" (click)="logout()">Logout</button>
+    } @else {
+      <a routerLink="/login" routerLinkActive="active">Login</a>
+      <a routerLink="/register" routerLinkActive="active">Register</a>
+    }
+  </nav>
+</header>
+
+<router-outlet />

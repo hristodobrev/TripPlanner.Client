@@ -1,0 +1,78 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  color: #18211f;
+  background:
+    linear-gradient(125deg, rgba(30, 114, 87, 0.15), transparent 36%),
+    linear-gradient(310deg, rgba(206, 43, 55, 0.12), transparent 35%),
+    #f7f8f4;
+}
+
+.topbar {
+  width: min(1180px, calc(100% - 40px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 auto;
+  padding: 18px 0 0;
+}
+
+.brand {
+  color: #18211f;
+  font-size: 1.1rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+nav a,
+nav button,
+.user-chip {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border: 1px solid #dfe6df;
+  border-radius: 8px;
+}
+
+nav a,
+nav button {
+  color: #52615d;
+  background: rgba(255, 255, 255, 0.72);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+nav button {
+  font: inherit;
+  cursor: pointer;
+}
+
+nav a.active,
+nav a:hover,
+nav button:hover {
+  color: #ffffff;
+  background: #1e7257;
+  border-color: #1e7257;
+}
+
+.user-chip {
+  color: #18211f;
+  background: #ffffff;
+  font-weight: 800;
+}
+
+@media (max-width: 620px) {
+  .topbar {
+    width: min(100% - 28px, 680px);
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
