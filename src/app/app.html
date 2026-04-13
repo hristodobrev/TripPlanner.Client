@@ -5,6 +5,7 @@
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Home</a>
 
     @if (currentUser(); as user) {
+      <a routerLink="/trips" routerLinkActive="active">Trips</a>
       <span class="user-chip">{{ user.firstName }} {{ user.lastName }}</span>
       <button type="button" (click)="logout()">Logout</button>
     } @else {

@@ -1,0 +1,52 @@
+<main class="trips-page">
+  <section class="trips-header" aria-labelledby="trips-title">
+    <p class="eyebrow">My trips</p>
+    <h1 id="trips-title">Your saved routes</h1>
+    <p>Pick up where you left off and keep the next plan moving.</p>
+  </section>
+
+  @if (isLoading()) {
+    <p class="status">Loading trips...</p>
+  } @else if (errorMessage()) {
+    <section class="status-panel" aria-live="polite">
+      <p>{{ errorMessage() }}</p>
+      <button type="button" (click)="loadTrips()">Try again</button>
+    </section>
+  } @else if (trips().length === 0) {
+    <section class="status-panel">
+      <h2>No trips yet</h2>
+      <p>Add your first trip from the home page.</p>
+    </section>
+  } @else {
+    <section class="trip-grid" aria-label="Saved trips">
+      @for (trip of trips(); track trackTrip($index, trip)) {
+        <article class="trip-card">
+          <div>
+            <p class="trip-date">{{ trip.startDate | date: 'mediumDate' }}</p>
+            <h2>{{ trip.name }}</h2>
+            @if (trip.description) {
+              <p>{{ trip.description }}</p>
+            }
+          </div>
+
+          <dl>
+            <div>
+              <dt>End date</dt>
+              <dd>{{ trip.endDate | date: 'mediumDate' }}</dd>
+            </div>
+            <div>
+              <dt>Duration</dt>
+              <dd>{{ trip.durationInDays }} days</dd>
+            </div>
+            <div>
+              <dt>Created</dt>
+              <dd>{{ trip.createdAtUtc | date: 'mediumDate' }}</dd>
+            </div>
+          </dl>
+
+          <a class="details-link" [routerLink]="['/trips', trip.id]">Open trip</a>
+        </article>
+      }
+    </section>
+  }
+</main>

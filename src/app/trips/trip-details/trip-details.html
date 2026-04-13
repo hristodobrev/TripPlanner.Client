@@ -1,0 +1,87 @@
+<main class="details-page">
+  <a class="back-link" routerLink="/trips">Back to trips</a>
+
+  @if (isLoadingTrip()) {
+    <p class="status">Loading trip...</p>
+  } @else if (tripError()) {
+    <section class="status-panel">
+      <p>{{ tripError() }}</p>
+    </section>
+  } @else if (trip(); as trip) {
+    <section class="trip-hero" aria-labelledby="trip-title">
+      <p class="eyebrow">Trip details</p>
+      <h1 id="trip-title">{{ trip.name }}</h1>
+      @if (trip.description) {
+        <p>{{ trip.description }}</p>
+      }
+
+      <dl>
+        <div>
+          <dt>Start</dt>
+          <dd>{{ trip.startDate | date: 'mediumDate' }}</dd>
+        </div>
+        <div>
+          <dt>End</dt>
+          <dd>{{ trip.endDate | date: 'mediumDate' }}</dd>
+        </div>
+        <div>
+          <dt>Duration</dt>
+          <dd>{{ trip.durationInDays }} days</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="search-panel" aria-labelledby="places-title">
+      <div>
+        <p class="eyebrow">Explore</p>
+        <h2 id="places-title">Find places for this trip</h2>
+      </div>
+
+      <form [formGroup]="searchForm" (ngSubmit)="searchPlaces()">
+        <label>
+          Search
+          <input type="text" formControlName="query" placeholder="Restaurants, museums, parks..." />
+          @if (searchForm.controls.query.touched && searchForm.controls.query.invalid) {
+            <span>Enter a search term.</span>
+          }
+        </label>
+        <button type="submit" [disabled]="isSearchingPlaces()">
+          {{ isSearchingPlaces() ? 'Searching...' : 'Search' }}
+        </button>
+      </form>
+
+      @if (searchError()) {
+        <p class="error-message">{{ searchError() }}</p>
+      }
+    </section>
+
+    @if (places().length > 0) {
+      <section class="places-grid" aria-label="Place search results">
+        @for (place of places(); track trackPlace($index, place)) {
+          <article class="place-card">
+            <div>
+              <p class="place-type">{{ place.primaryTypeDisplayName || 'Place' }}</p>
+              <h3>{{ place.name }}</h3>
+              <p>{{ place.locality }}, {{ place.country }}</p>
+            </div>
+
+            <dl>
+              <div>
+                <dt>Rating</dt>
+                <dd>{{ place.rating | number: '1.1-1' }}</dd>
+              </div>
+              <div>
+                <dt>Reviews</dt>
+                <dd>{{ place.userRatingCount }}</dd>
+              </div>
+            </dl>
+
+            @if (place.websiteUri) {
+              <a [href]="place.websiteUri" target="_blank" rel="noopener">Visit website</a>
+            }
+          </article>
+        }
+      </section>
+    }
+  }
+</main>

@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { AddTripRequest } from './trip.models';
+import { AddTripRequest, Trip } from './trip.models';
 
 @Injectable({ providedIn: 'root' })
 export class TripsService {
@@ -9,5 +9,13 @@ export class TripsService {
 
   addTrip(request: AddTripRequest) {
     return this.http.post('/api/Trips', request);
+  }
+
+  getTrips() {
+    return this.http.get<Trip[]>('/api/Trips');
+  }
+
+  getTrip(id: string) {
+    return this.http.get<Trip>(`/api/Trips/${encodeURIComponent(id)}`);
   }
 }
