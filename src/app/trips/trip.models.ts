@@ -2,8 +2,14 @@ export interface AddTripRequest {
   name: string;
   description: string;
   placeId: string;
+  placeName: string;
   startDate: string;
   endDate: string;
+}
+
+export interface TripPlace {
+  externalId: string;
+  name: string;
 }
 
 export interface Trip {
@@ -13,6 +19,8 @@ export interface Trip {
   startDate: string;
   endDate: string;
   durationInDays: number;
-  externalPlaceId: string;
+  destinationExternalId: string;
+  externalPlaceId?: string;
+  places?: TripPlace[];
   createdAtUtc: string;
 }

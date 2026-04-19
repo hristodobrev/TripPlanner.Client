@@ -29,6 +29,40 @@
           <dd>{{ trip.durationInDays }} days</dd>
         </div>
       </dl>
+
+      <button class="danger-button" type="button" [disabled]="deletingTrip()" (click)="deleteTrip()">
+        {{ deletingTrip() ? 'Deleting trip...' : 'Delete trip' }}
+      </button>
+    </section>
+
+    <section class="saved-places" aria-labelledby="saved-places-title">
+      <div>
+        <p class="eyebrow">Saved places</p>
+        <h2 id="saved-places-title">Places in this trip</h2>
+      </div>
+
+      @if (trip.places?.length) {
+        <ul>
+          @for (place of trip.places; track trackTripPlace($index, place)) {
+            <li>
+              <div>
+                <strong>{{ place.name }}</strong>
+                <span>{{ place.externalId }}</span>
+              </div>
+              <button
+                class="danger-button"
+                type="button"
+                [disabled]="deletingPlaceExternalId() === place.externalId"
+                (click)="removePlace(place)"
+              >
+                {{ deletingPlaceExternalId() === place.externalId ? 'Removing...' : 'Remove' }}
+              </button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p>No places added yet.</p>
+      }
     </section>
 
     <section class="search-panel" aria-labelledby="places-title">
@@ -52,6 +86,10 @@
 
       @if (searchError()) {
         <p class="error-message">{{ searchError() }}</p>
+      }
+
+      @if (addPlaceMessage()) {
+        <p class="add-place-message">{{ addPlaceMessage() }}</p>
       }
     </section>
 
@@ -79,6 +117,20 @@
             @if (place.websiteUri) {
               <a [href]="place.websiteUri" target="_blank" rel="noopener">Visit website</a>
             }
+
+            <button
+              type="button"
+              [disabled]="addingPlaceExternalId() === place.externalPlaceId || isPlaceAdded(place)"
+              (click)="addPlace(place)"
+            >
+              @if (isPlaceAdded(place)) {
+                Added
+              } @else if (addingPlaceExternalId() === place.externalPlaceId) {
+                Adding...
+              } @else {
+                Add to trip
+              }
+            </button>
           </article>
         }
       </section>

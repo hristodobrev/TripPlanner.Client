@@ -11,3 +11,8 @@ export interface PlaceSearchResult {
   userRatingCount: number;
   primaryTypeDisplayName: string;
 }
+
+export interface AddPlaceRequest {
+  externalPlaceId: string;
+  name: string;
+}

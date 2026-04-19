@@ -59,10 +59,34 @@ dd {
   box-shadow: 0 18px 60px rgba(24, 33, 31, 0.1);
 }
 
+.trip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
 .details-link {
   width: fit-content;
   color: #1e7257;
   font-weight: 900;
+}
+
+.delete-button {
+  min-height: 40px;
+  padding: 0 14px;
+  color: #ffffff;
+  background: #b3261e;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.delete-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .trip-card h2 {

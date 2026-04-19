@@ -18,4 +18,8 @@ export class TripsService {
   getTrip(id: string) {
     return this.http.get<Trip>(`/api/Trips/${encodeURIComponent(id)}`);
   }
+
+  deleteTrip(tripId: string) {
+    return this.http.delete(`/api/trips/${encodeURIComponent(tripId)}`);
+  }
 }

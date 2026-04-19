@@ -17,6 +17,7 @@ export class TripsListComponent {
 
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
+  protected readonly deletingTripId = signal<string | null>(null);
   protected readonly trips = signal<Trip[]>([]);
 
   constructor() {
@@ -38,5 +39,22 @@ export class TripsListComponent {
 
   protected trackTrip(_: number, trip: Trip) {
     return trip.id;
+  }
+
+  protected deleteTrip(trip: Trip) {
+    if (!confirm(`Delete ${trip.name}?`)) {
+      return;
+    }
+
+    this.errorMessage.set('');
+    this.deletingTripId.set(trip.id);
+
+    this.tripsService
+      .deleteTrip(trip.id)
+      .pipe(finalize(() => this.deletingTripId.set(null)))
+      .subscribe({
+        next: () => this.trips.update((trips) => trips.filter((item) => item.id !== trip.id)),
+        error: () => this.errorMessage.set('Could not delete this trip. Please try again.'),
+      });
   }
 }

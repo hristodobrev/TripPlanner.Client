@@ -44,7 +44,17 @@
             </div>
           </dl>
 
-          <a class="details-link" [routerLink]="['/trips', trip.id]">Open trip</a>
+          <div class="trip-actions">
+            <a class="details-link" [routerLink]="['/trips', trip.id]">Open trip</a>
+            <button
+              class="delete-button"
+              type="button"
+              [disabled]="deletingTripId() === trip.id"
+              (click)="deleteTrip(trip)"
+            >
+              {{ deletingTripId() === trip.id ? 'Deleting...' : 'Delete' }}
+            </button>
+          </div>
         </article>
       }
     </section>

@@ -12,6 +12,7 @@
 }
 
 .trip-hero,
+.saved-places,
 .search-panel,
 .status-panel {
   display: grid;
@@ -24,6 +25,10 @@
 }
 
 .search-panel {
+  margin-top: 20px;
+}
+
+.saved-places {
   margin-top: 20px;
 }
 
@@ -70,6 +75,43 @@ p,
 dd {
   color: #52615d;
   line-height: 1.6;
+}
+
+.saved-places ul {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-places li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px;
+  background: #f7f8f4;
+  border: 1px solid #dfe6df;
+  border-radius: 8px;
+}
+
+.saved-places li div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.saved-places strong {
+  color: #18211f;
+}
+
+.saved-places span {
+  overflow-wrap: anywhere;
+  color: #52615d;
+  font-size: 0.82rem;
 }
 
 dl {
@@ -124,6 +166,11 @@ span,
   font-weight: 700;
 }
 
+.add-place-message {
+  color: #1e7257;
+  font-weight: 800;
+}
+
 button {
   height: 48px;
   padding: 0 18px;
@@ -139,6 +186,11 @@ button {
 button:disabled {
   cursor: wait;
   opacity: 0.72;
+}
+
+.danger-button {
+  width: fit-content;
+  background: #b3261e;
 }
 
 .status {
@@ -174,6 +226,10 @@ button:disabled {
   font-weight: 900;
 }
 
+.place-card button {
+  width: fit-content;
+}
+
 .place-type {
   color: #1e7257;
   font-weight: 900;
@@ -191,6 +247,7 @@ button:disabled {
 
   form,
   dl,
+  .saved-places ul,
   .places-grid,
   .place-card dl {
     grid-template-columns: 1fr;

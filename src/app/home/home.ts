@@ -149,6 +149,7 @@ export class HomeComponent {
       name: this.formatPlace(place),
       description: formValue.description.trim(),
       placeId: place.placeId,
+      placeName: place.mainText,
       startDate,
       endDate,
     };
