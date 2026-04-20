@@ -8,8 +8,11 @@ export interface AddTripRequest {
 }
 
 export interface TripPlace {
-  externalId: string;
+  id: string;
   name: string;
+  order: number;
+  dayNumber: number | null;
+  note?: string | null;
 }
 
 export interface Trip {
@@ -20,7 +23,6 @@ export interface Trip {
   endDate: string;
   durationInDays: number;
   destinationExternalId: string;
-  externalPlaceId?: string;
   places?: TripPlace[];
   createdAtUtc: string;
 }

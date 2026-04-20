@@ -1,0 +1,110 @@
+<section class="saved-places" aria-labelledby="saved-places-title">
+  <div>
+    <p class="eyebrow">Saved places</p>
+    <h2 id="saved-places-title">Places in this trip</h2>
+  </div>
+
+  <div class="day-sections">
+    @for (section of getPlaceDaySections(); track trackDaySection($index, section)) {
+      <section
+        class="day-section"
+        [class.empty]="section.places.length === 0"
+        (dragover)="allowPlaceDrop($event)"
+        (drop)="dropPlace($event, section.dayNumber)"
+      >
+        <h3>{{ section.title }}</h3>
+
+        @if (section.places.length > 0) {
+          <ul>
+            @for (place of section.places; track trackTripPlace($index, place)) {
+              <li
+                draggable="true"
+                [class.dragging]="draggedPlaceId() === place.id"
+                (dragstart)="startPlaceDrag($event, place)"
+                (dragover)="allowPlaceDrop($event)"
+                (drop)="dropPlace($event, section.dayNumber, place)"
+                (dragend)="endPlaceDrag()"
+              >
+                <div class="place-content">
+                  <span class="drag-handle" aria-hidden="true">Drag</span>
+                  <strong>{{ place.name }}</strong>
+                  @if (place.note) {
+                    <p class="place-note">{{ place.note }}</p>
+                  }
+                </div>
+
+                <div class="place-actions">
+                  <button
+                    class="note-button"
+                    type="button"
+                    (click)="startNoteEdit(place)"
+                    [attr.aria-label]="place.note ? 'Edit note for ' + place.name : 'Add note for ' + place.name"
+                    [title]="place.note ? 'Edit note' : 'Add note'"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M20 14V7C20 5.34315 18.6569 4 17 4H7C5.34315 4 4 5.34315 4 7V17C4 18.6569 5.34315 20 7 20H13.5M20 14L13.5 20M20 14H15.5C14.3954 14 13.5 14.8954 13.5 16V20" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M8 8H16" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M8 12H12" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                  </button>
+                  <button
+                    class="icon-button danger-button"
+                    type="button"
+                    [disabled]="deletingPlaceId() === place.id || isReorderingPlaces()"
+                    (click)="removePlace(place)"
+                    [attr.aria-label]="'Remove ' + place.name"
+                    title="Remove place"
+                  >
+                    @if (deletingPlaceId() === place.id) {
+                      ...
+                    } @else {
+                      <svg aria-hidden="true" viewBox="0 0 1000 1000">
+                        <path d="M767 336H233q-12 0-21 9t-9 21l38 505q1 13 12 21.5t30 8.5h434q18 0 29-8.5t13-21.5l38-505q0-12-9-21t-21-9zM344 841q-10 0-18-9t-8-21l-26-386q0-12 9-20.5t21-8.5 21 8.5 9 20.5l18 386q0 12-7.5 21t-18.5 9zm182-31q0 13-7.5 22t-18.5 9-18.5-9-7.5-22l-4-385q0-12 9-20.5t21-8.5 21 8.5 9 20.5zm156 1q0 12-8 21t-18 9q-11 0-18.5-9t-7.5-21l18-386q0-12 9-20.5t21-8.5 21 8.5 9 20.5zm101-605l-179-30q-12-2-15-15l-8-33q-4-20-14-26-6-3-22-3h-90q-16 0-23 3-10 6-13 26l-8 33q-2 13-15 15l-179 30q-19 3-31.5 14.5T173 249v28q0 9 6.5 15t15.5 6h610q9 0 15.5-6t6.5-15v-28q0-17-12.5-28.5T783 206z"/>
+                      </svg>
+                    }
+                  </button>
+                </div>
+
+                @if (editingNotePlaceId() === place.id) {
+                  <form class="note-editor" (submit)="$event.preventDefault(); saveNote(place)">
+                    <label>
+                      Note
+                      <textarea
+                        [value]="noteDraft()"
+                        (input)="updateNoteDraft($any($event.target).value)"
+                        placeholder="Add a note for this place."
+                        rows="3"
+                      ></textarea>
+                    </label>
+                    <div>
+                      <button type="submit" [disabled]="savingNotePlaceId() === place.id">
+                        {{ savingNotePlaceId() === place.id ? 'Saving...' : 'Save note' }}
+                      </button>
+                      <button class="secondary-button" type="button" (click)="cancelNoteEdit()">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p>Drop places here.</p>
+        }
+      </section>
+    }
+  </div>
+
+  @if (message()) {
+    <p class="places-message">{{ message() }}</p>
+  }
+
+  @if (isReorderingPlaces()) {
+    <p class="places-message">Saving place order...</p>
+  }
+</section>
+
+<app-place-search
+  [tripId]="trip.id"
+  [destinationExternalId]="trip.destinationExternalId"
+  [existingPlaceNames]="getExistingPlaceNames()"
+  [nextOrder]="getNextUnscheduledOrder()"
+  (placeAdded)="addPlaceLocally($event)"
+/>

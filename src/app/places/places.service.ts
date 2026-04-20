@@ -1,7 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { AddPlaceRequest, PlaceSearchResult } from './place-search.models';
+import {
+  AddPlaceRequest,
+  PlaceSearchResult,
+  ReorderPlacesRequest,
+  UpdatePlaceNoteRequest,
+} from './place-search.models';
 
 @Injectable({ providedIn: 'root' })
 export class PlacesService {
@@ -14,10 +19,18 @@ export class PlacesService {
   }
 
   addPlace(request: AddPlaceRequest) {
-    return this.http.post('/api/places', request);
+    return this.http.post<string>('/api/places', request);
   }
 
   deletePlace(placeId: string) {
     return this.http.delete(`/api/places/${encodeURIComponent(placeId)}`);
+  }
+
+  updatePlaceNote(placeId: string, request: UpdatePlaceNoteRequest) {
+    return this.http.put(`/api/Places/${encodeURIComponent(placeId)}`, request);
+  }
+
+  reorderPlaces(request: ReorderPlacesRequest) {
+    return this.http.put('/api/Places/reorder', request);
   }
 }

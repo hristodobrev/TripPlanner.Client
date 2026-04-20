@@ -13,6 +13,22 @@ export interface PlaceSearchResult {
 }
 
 export interface AddPlaceRequest {
+  tripId: string;
   externalPlaceId: string;
   name: string;
+}
+
+export interface UpdatePlaceNoteRequest {
+  placeId: string;
+  note?: string;
+}
+
+export interface ReorderPlacesRequest {
+  tripId: string;
+  days: ReorderPlacesDayRequest[];
+}
+
+export interface ReorderPlacesDayRequest {
+  dayNumber: number | null;
+  placeIds: string[];
 }

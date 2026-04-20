@@ -1,0 +1,70 @@
+<section class="search-panel" aria-labelledby="places-title">
+  <div>
+    <p class="eyebrow">Explore</p>
+    <h2 id="places-title">Find places for this trip</h2>
+  </div>
+
+  <form [formGroup]="searchForm" (ngSubmit)="searchPlaces()">
+    <label>
+      Search
+      <input type="text" formControlName="query" placeholder="Restaurants, museums, parks..." />
+      @if (searchForm.controls.query.touched && searchForm.controls.query.invalid) {
+        <span>Enter a search term.</span>
+      }
+    </label>
+    <button type="submit" [disabled]="isSearchingPlaces()">
+      {{ isSearchingPlaces() ? 'Searching...' : 'Search' }}
+    </button>
+  </form>
+
+  @if (searchError()) {
+    <p class="error-message">{{ searchError() }}</p>
+  }
+
+  @if (message()) {
+    <p class="places-message">{{ message() }}</p>
+  }
+</section>
+
+@if (searchResults().length > 0) {
+  <section class="places-grid" aria-label="Place search results">
+    @for (place of searchResults(); track trackPlace($index, place)) {
+      <article class="place-card">
+        <div>
+          <p class="place-type">{{ place.primaryTypeDisplayName || 'Place' }}</p>
+          <h3>{{ place.name }}</h3>
+          <p>{{ place.locality }}, {{ place.country }}</p>
+        </div>
+
+        <dl>
+          <div>
+            <dt>Rating</dt>
+            <dd>{{ place.rating | number: '1.1-1' }}</dd>
+          </div>
+          <div>
+            <dt>Reviews</dt>
+            <dd>{{ place.userRatingCount }}</dd>
+          </div>
+        </dl>
+
+        @if (place.websiteUri) {
+          <a [href]="place.websiteUri" target="_blank" rel="noopener">Visit website</a>
+        }
+
+        <button
+          type="button"
+          [disabled]="addingPlaceExternalId() === place.externalPlaceId || isPlaceAdded(place)"
+          (click)="addPlace(place)"
+        >
+          @if (isPlaceAdded(place)) {
+            Added
+          } @else if (addingPlaceExternalId() === place.externalPlaceId) {
+            Adding...
+          } @else {
+            Add to trip
+          }
+        </button>
+      </article>
+    }
+  </section>
+}
