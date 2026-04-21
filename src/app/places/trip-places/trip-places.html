@@ -28,6 +28,16 @@
                 <div class="place-content">
                   <span class="drag-handle" aria-hidden="true">Drag</span>
                   <strong>{{ place.name }}</strong>
+                  @if (hasPlaceDetails(place)) {
+                    <div class="place-details">
+                      @if (place.plannedTime) {
+                        <span>{{ formatPlannedTime(place.plannedTime) }}</span>
+                      }
+                      @if (place.durationMinutes !== null && place.durationMinutes !== undefined) {
+                        <span>{{ place.durationMinutes }} min</span>
+                      }
+                    </div>
+                  }
                   @if (place.note) {
                     <p class="place-note">{{ place.note }}</p>
                   }
@@ -62,7 +72,7 @@
                 </div>
 
                 @if (editingNotePlaceId() === place.id) {
-                  <form class="note-editor" (submit)="$event.preventDefault(); saveNote(place)">
+                  <form class="note-editor" (submit)="$event.preventDefault(); savePlaceDetails(place)">
                     <label>
                       Note
                       <textarea
@@ -72,9 +82,31 @@
                         rows="3"
                       ></textarea>
                     </label>
+                    <div class="place-editor-fields">
+                      <label>
+                        Planned time
+                        <input
+                          type="time"
+                          [value]="plannedTimeDraft()"
+                          (input)="updatePlannedTimeDraft($any($event.target).value)"
+                        />
+                      </label>
+                      <label>
+                        Duration minutes
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          inputmode="numeric"
+                          [value]="durationMinutesDraft()"
+                          (input)="updateDurationMinutesDraft($any($event.target).value)"
+                          placeholder="60"
+                        />
+                      </label>
+                    </div>
                     <div>
                       <button type="submit" [disabled]="savingNotePlaceId() === place.id">
-                        {{ savingNotePlaceId() === place.id ? 'Saving...' : 'Save note' }}
+                        {{ savingNotePlaceId() === place.id ? 'Saving...' : 'Save details' }}
                       </button>
                       <button class="secondary-button" type="button" (click)="cancelNoteEdit()">
                         Cancel

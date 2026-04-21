@@ -18,17 +18,25 @@ export interface AddPlaceRequest {
   name: string;
 }
 
-export interface UpdatePlaceNoteRequest {
+export interface UpdatePlaceRequest {
   placeId: string;
   note?: string;
+  plannedTime?: string;
+  durationMinutes?: number;
 }
 
-export interface ReorderPlacesRequest {
+export interface ReorderPlaceRequest {
   tripId: string;
-  days: ReorderPlacesDayRequest[];
+  sourceId: string;
+  targetId: string | null;
+  dayNumber: number | null;
 }
 
-export interface ReorderPlacesDayRequest {
+export interface TripPlaceResponse {
+  id: string;
   dayNumber: number | null;
-  placeIds: string[];
+  name: string;
+  note: string | null;
+  durationMinutes: number | null;
+  plannedTime: string | null;
 }

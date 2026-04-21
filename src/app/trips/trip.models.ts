@@ -13,6 +13,8 @@ export interface TripPlace {
   order: number;
   dayNumber: number | null;
   note?: string | null;
+  durationMinutes?: number | null;
+  plannedTime?: string | null;
 }
 
 export interface Trip {

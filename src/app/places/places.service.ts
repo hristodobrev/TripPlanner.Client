@@ -4,8 +4,9 @@ import { inject, Injectable } from '@angular/core';
 import {
   AddPlaceRequest,
   PlaceSearchResult,
-  ReorderPlacesRequest,
-  UpdatePlaceNoteRequest,
+  ReorderPlaceRequest,
+  TripPlaceResponse,
+  UpdatePlaceRequest,
 } from './place-search.models';
 
 @Injectable({ providedIn: 'root' })
@@ -26,11 +27,11 @@ export class PlacesService {
     return this.http.delete(`/api/places/${encodeURIComponent(placeId)}`);
   }
 
-  updatePlaceNote(placeId: string, request: UpdatePlaceNoteRequest) {
+  updatePlace(placeId: string, request: UpdatePlaceRequest) {
     return this.http.put(`/api/Places/${encodeURIComponent(placeId)}`, request);
   }
 
-  reorderPlaces(request: ReorderPlacesRequest) {
-    return this.http.put('/api/Places/reorder', request);
+  reorderPlace(request: ReorderPlaceRequest) {
+    return this.http.put<TripPlaceResponse[]>('/api/Places/reorder', request);
   }
 }

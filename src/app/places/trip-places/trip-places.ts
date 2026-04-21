@@ -2,6 +2,7 @@ import { Component, EventEmitter, inject, Input, Output, signal } from '@angular
 import { finalize } from 'rxjs';
 
 import { PlaceSearchComponent } from '../place-search/place-search';
+import { TripPlaceResponse } from '../place-search.models';
 import { PlacesService } from '../places.service';
 import { Trip, TripPlace } from '../../trips/trip.models';
 
@@ -27,9 +28,11 @@ export class TripPlacesComponent {
   protected readonly draggedPlaceId = signal<string | null>(null);
   protected readonly deletingPlaceId = signal<string | null>(null);
   protected readonly editingNotePlaceId = signal<string | null>(null);
+  protected readonly durationMinutesDraft = signal('');
   protected readonly isReorderingPlaces = signal(false);
   protected readonly message = signal('');
   protected readonly noteDraft = signal('');
+  protected readonly plannedTimeDraft = signal('');
   protected readonly savingNotePlaceId = signal<string | null>(null);
 
   protected getPlaceDaySections(): PlaceDaySection[] {
@@ -77,40 +80,63 @@ export class TripPlacesComponent {
     this.message.set('');
     this.editingNotePlaceId.set(place.id);
     this.noteDraft.set(place.note ?? '');
+    this.plannedTimeDraft.set(this.toTimeInputValue(place.plannedTime));
+    this.durationMinutesDraft.set(place.durationMinutes?.toString() ?? '');
   }
 
   protected cancelNoteEdit() {
     this.editingNotePlaceId.set(null);
     this.noteDraft.set('');
+    this.plannedTimeDraft.set('');
+    this.durationMinutesDraft.set('');
   }
 
   protected updateNoteDraft(value: string) {
     this.noteDraft.set(value);
   }
 
-  protected saveNote(place: TripPlace) {
+  protected updatePlannedTimeDraft(value: string) {
+    this.plannedTimeDraft.set(value);
+  }
+
+  protected updateDurationMinutesDraft(value: string) {
+    this.durationMinutesDraft.set(value);
+  }
+
+  protected savePlaceDetails(place: TripPlace) {
     const note = this.noteDraft().trim();
+    const plannedTime = this.toPlaceRequestTime(this.plannedTimeDraft());
+    const durationMinutes = this.toDurationMinutes(this.durationMinutesDraft());
 
     this.message.set('');
     this.savingNotePlaceId.set(place.id);
 
     this.placesService
-      .updatePlaceNote(place.id, {
+      .updatePlace(place.id, {
         placeId: place.id,
         ...(note ? { note } : {}),
+        ...(plannedTime ? { plannedTime } : {}),
+        ...(durationMinutes !== null ? { durationMinutes } : {}),
       })
       .pipe(finalize(() => this.savingNotePlaceId.set(null)))
       .subscribe({
         next: () => {
           this.placesChanged.emit(
             (this.trip.places ?? []).map((item) =>
-              item.id === place.id ? { ...item, note: note || null } : item,
+              item.id === place.id
+                ? {
+                    ...item,
+                    note: note || null,
+                    plannedTime: plannedTime || null,
+                    durationMinutes,
+                  }
+                : item,
             ),
           );
           this.cancelNoteEdit();
-          this.message.set(note ? 'Note saved.' : 'Note removed.');
+          this.message.set('Place details saved.');
         },
-        error: () => this.message.set('Could not save the note. Please try again.'),
+        error: () => this.message.set('Could not save place details. Please try again.'),
       });
   }
 
@@ -142,6 +168,15 @@ export class TripPlacesComponent {
       return;
     }
 
+    const sourceSection = this.getPlaceDaySections().find(
+      (section) => section.dayNumber === draggedPlace.dayNumber,
+    );
+    const sourceIndex =
+      sourceSection?.places.findIndex((place) => place.id === draggedPlaceId) ?? -1;
+    const originalTargetIndex = targetPlace
+      ? sourceSection?.places.findIndex((place) => place.id === targetPlace.id) ?? -1
+      : -1;
+
     const nextSections = this.getPlaceDaySections().map((section) => ({
       ...section,
       places: section.places.filter((place) => place.id !== draggedPlaceId),
@@ -156,14 +191,26 @@ export class TripPlacesComponent {
     const targetIndex = targetPlace
       ? targetSection.places.findIndex((place) => place.id === targetPlace.id)
       : targetSection.places.length;
+    const insertIndex =
+      targetPlace &&
+      draggedPlace.dayNumber === targetDayNumber &&
+      sourceIndex >= 0 &&
+      originalTargetIndex >= 0 &&
+      sourceIndex < originalTargetIndex
+        ? targetIndex + 1
+        : targetIndex;
 
-    targetSection.places.splice(targetIndex >= 0 ? targetIndex : targetSection.places.length, 0, {
+    targetSection.places.splice(insertIndex >= 0 ? insertIndex : targetSection.places.length, 0, {
       ...draggedPlace,
       dayNumber: targetDayNumber,
     });
 
     this.draggedPlaceId.set(null);
-    this.savePlaceOrder(nextSections);
+    this.savePlaceOrder(nextSections, {
+      dayNumber: targetDayNumber,
+      sourceId: draggedPlaceId,
+      targetId: targetPlace?.id ?? null,
+    });
   }
 
   protected endPlaceDrag() {
@@ -182,13 +229,27 @@ export class TripPlacesComponent {
     return section.dayNumber ?? 'unscheduled';
   }
 
+  protected formatPlannedTime(plannedTime: string | null | undefined) {
+    return this.toTimeInputValue(plannedTime);
+  }
+
+  protected hasPlaceDetails(place: TripPlace) {
+    return Boolean(
+      place.plannedTime ||
+        (place.durationMinutes !== null && place.durationMinutes !== undefined),
+    );
+  }
+
   private getPlacesForDay(places: TripPlace[], dayNumber: number | null) {
     return places
       .filter((place) => place.dayNumber === dayNumber)
       .sort((first, second) => first.order - second.order);
   }
 
-  private savePlaceOrder(sections: PlaceDaySection[]) {
+  private savePlaceOrder(
+    sections: PlaceDaySection[],
+    movedPlace: { dayNumber: number | null; sourceId: string; targetId: string | null },
+  ) {
     const previousPlaces = this.trip.places ?? [];
     const nextPlaces = sections.flatMap((section) =>
       section.places.map((place, index) => ({
@@ -203,21 +264,44 @@ export class TripPlacesComponent {
     this.placesChanged.emit(nextPlaces);
 
     this.placesService
-      .reorderPlaces({
+      .reorderPlace({
         tripId: this.trip.id,
-        days: sections.map((section) => ({
-          dayNumber: section.dayNumber,
-          placeIds: section.places.map((place) => place.id),
-        })),
+        sourceId: movedPlace.sourceId,
+        targetId: movedPlace.targetId,
+        dayNumber: movedPlace.dayNumber,
       })
       .pipe(finalize(() => this.isReorderingPlaces.set(false)))
       .subscribe({
-        next: () => this.message.set('Places reordered.'),
+        next: (places) => {
+          this.placesChanged.emit(this.mapReorderedPlaces(places));
+          this.message.set('Places reordered.');
+        },
         error: () => {
           this.placesChanged.emit(previousPlaces);
           this.message.set('Could not reorder places. Please try again.');
         },
       });
+  }
+
+  private mapReorderedPlaces(places: TripPlaceResponse[]) {
+    const dayOrderMap = new Map<string, number>();
+
+    return places.map((place) => {
+      const dayKey = place.dayNumber?.toString() ?? 'unscheduled';
+      const order = (dayOrderMap.get(dayKey) ?? 0) + 1;
+
+      dayOrderMap.set(dayKey, order);
+
+      return {
+        id: place.id,
+        name: place.name,
+        dayNumber: place.dayNumber,
+        order,
+        note: place.note,
+        durationMinutes: place.durationMinutes,
+        plannedTime: place.plannedTime,
+      };
+    });
   }
 
   protected getExistingPlaceNames() {
@@ -227,5 +311,35 @@ export class TripPlacesComponent {
   protected getNextUnscheduledOrder() {
     const unscheduledPlaces = (this.trip.places ?? []).filter((place) => place.dayNumber === null);
     return Math.max(0, ...unscheduledPlaces.map((place) => place.order)) + 1;
+  }
+
+  private toDurationMinutes(value: string) {
+    const trimmedValue = value.trim();
+
+    if (!trimmedValue) {
+      return null;
+    }
+
+    const durationMinutes = Number(trimmedValue);
+    return Number.isFinite(durationMinutes) && durationMinutes >= 0
+      ? Math.trunc(durationMinutes)
+      : null;
+  }
+
+  private toPlaceRequestTime(value: string) {
+    if (!value) {
+      return null;
+    }
+
+    return value.slice(0, 5);
+  }
+
+  private toTimeInputValue(value: string | null | undefined) {
+    if (!value) {
+      return '';
+    }
+
+    const timeParts = value.replace('Z', '').split(':');
+    return timeParts.length >= 2 ? `${timeParts[0]}:${timeParts[1]}` : '';
   }
 }

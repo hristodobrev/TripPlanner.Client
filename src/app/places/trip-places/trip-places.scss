@@ -111,6 +111,22 @@ strong {
   line-height: 1.5;
 }
 
+.place-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.place-details span {
+  width: fit-content;
+  padding: 3px 8px;
+  color: #1e7257;
+  background: #eef5f1;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
 .place-actions {
   display: flex;
   gap: 8px;
@@ -232,8 +248,31 @@ button:disabled {
   resize: vertical;
 }
 
+.note-editor input {
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  color: #18211f;
+  background: #f7f8f4;
+  border: 1px solid #cbd6cf;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.note-editor .place-editor-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .note-editor div {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .note-editor .place-editor-fields {
+    grid-template-columns: 1fr;
+  }
 }
