@@ -141,32 +141,8 @@ strong {
   text-transform: uppercase;
 }
 
-button {
-  height: 48px;
-  padding: 0 18px;
-  color: #ffffff;
-  background: #1e7257;
-  border: 0;
-  border-radius: 8px;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.secondary-button {
-  color: #1e7257;
-  background: #eef5f1;
-}
-
 .note-button {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  display: inline-grid;
-  place-items: center;
   color: #1e7257;
-  background: transparent;
-  border-radius: 8px;
 }
 
 .note-button:hover,
@@ -175,46 +151,21 @@ button {
   background: #eef5f1;
 }
 
-.note-button svg {
-  width: 22px;
-  height: 22px;
-  display: block;
-}
-
-.note-button svg path {
-  stroke: currentColor;
-}
-
 .icon-button {
-  width: 40px !important;
-  height: 40px !important;
-  padding: 0;
-  display: inline-grid;
-  place-items: center;
   color: #861b15;
-  background: #f8e9e7 !important;
+  background: #f8e9e7;
 }
 
 .icon-button:hover {
   color: white;
-  background: #861b15 !important;
+  background: #861b15;
 }
 
-.icon-button svg {
-  width: 21px;
-  height: 21px;
-  display: block;
-  fill: currentColor;
-}
-
-button:disabled {
-  cursor: wait;
-  opacity: 0.72;
-}
-
-.danger-button {
-  width: fit-content;
-  background: #b3261e;
+.note-button .mat-icon,
+.icon-button .mat-icon {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
 }
 
 .places-message {
@@ -237,26 +188,13 @@ button:disabled {
   font-weight: 700;
 }
 
-.note-editor textarea {
-  min-width: 0;
-  padding: 12px 14px;
-  color: #18211f;
-  background: #f7f8f4;
-  border: 1px solid #cbd6cf;
-  border-radius: 8px;
-  font: inherit;
-  resize: vertical;
+.note-editor mat-form-field {
+  width: 100%;
 }
 
-.note-editor input {
-  min-width: 0;
-  height: 44px;
-  padding: 0 12px;
-  color: #18211f;
-  background: #f7f8f4;
-  border: 1px solid #cbd6cf;
-  border-radius: 8px;
-  font: inherit;
+.note-editor textarea[matinput] {
+  min-height: 88px;
+  resize: vertical;
 }
 
 .note-editor .place-editor-fields {
@@ -269,6 +207,11 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.note-editor .app-primary-button,
+.note-editor .app-secondary-button {
+  min-width: 128px;
 }
 
 @media (max-width: 640px) {

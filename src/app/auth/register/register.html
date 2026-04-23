@@ -10,38 +10,46 @@
       <div class="form-row">
         <label>
           First name
-          <input type="text" formControlName="firstName" autocomplete="given-name" />
-          @if (form.controls.firstName.touched && form.controls.firstName.invalid) {
-            <span>First name is required.</span>
-          }
+          <mat-form-field appearance="outline">
+            <input matInput type="text" formControlName="firstName" autocomplete="given-name" />
+            @if (form.controls.firstName.touched && form.controls.firstName.invalid) {
+              <mat-error>First name is required.</mat-error>
+            }
+          </mat-form-field>
         </label>
 
         <label>
           Last name
-          <input type="text" formControlName="lastName" autocomplete="family-name" />
-          @if (form.controls.lastName.touched && form.controls.lastName.invalid) {
-            <span>Last name is required.</span>
-          }
+          <mat-form-field appearance="outline">
+            <input matInput type="text" formControlName="lastName" autocomplete="family-name" />
+            @if (form.controls.lastName.touched && form.controls.lastName.invalid) {
+              <mat-error>Last name is required.</mat-error>
+            }
+          </mat-form-field>
         </label>
       </div>
 
       <label>
         Email
-        <input type="email" formControlName="email" autocomplete="email" />
-        @if (form.controls.email.touched && form.controls.email.invalid) {
-          <span>Enter a valid email address.</span>
-        }
+        <mat-form-field appearance="outline">
+          <input matInput type="email" formControlName="email" autocomplete="email" />
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <mat-error>Enter a valid email address.</mat-error>
+          }
+        </mat-form-field>
       </label>
 
       <label>
         Password
-        <input type="password" formControlName="password" autocomplete="new-password" />
-        @if (form.controls.password.touched && form.controls.password.invalid) {
-          <span>Use at least 6 characters.</span>
-        }
+        <mat-form-field appearance="outline">
+          <input matInput type="password" formControlName="password" autocomplete="new-password" />
+          @if (form.controls.password.touched && form.controls.password.invalid) {
+            <mat-error>Use at least 6 characters.</mat-error>
+          }
+        </mat-form-field>
       </label>
 
-      <button type="submit" [disabled]="isSubmitting()">
+      <button mat-flat-button class="app-primary-button" type="submit" [disabled]="isSubmitting()">
         {{ isSubmitting() ? 'Creating account...' : 'Create account' }}
       </button>
     </form>

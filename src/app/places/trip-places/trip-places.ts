@@ -1,9 +1,16 @@
 import { Component, EventEmitter, inject, Input, Output, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatTimepickerModule } from '@angular/material/timepicker';
 import { finalize } from 'rxjs';
 
 import { PlaceSearchComponent } from '../place-search/place-search';
 import { TripPlaceResponse } from '../place-search.models';
 import { PlacesService } from '../places.service';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog';
 import { Trip, TripPlace } from '../../trips/trip.models';
 
 interface PlaceDaySection {
@@ -14,11 +21,19 @@ interface PlaceDaySection {
 
 @Component({
   selector: 'app-trip-places',
-  imports: [PlaceSearchComponent],
+  imports: [
+    PlaceSearchComponent,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatTimepickerModule,
+  ],
   templateUrl: './trip-places.html',
   styleUrl: './trip-places.scss',
 })
 export class TripPlacesComponent {
+  private readonly dialog = inject(MatDialog);
   private readonly placesService = inject(PlacesService);
 
   @Input({ required: true }) trip!: Trip;
@@ -32,7 +47,7 @@ export class TripPlacesComponent {
   protected readonly isReorderingPlaces = signal(false);
   protected readonly message = signal('');
   protected readonly noteDraft = signal('');
-  protected readonly plannedTimeDraft = signal('');
+  protected readonly plannedTimeDraft = signal<Date | null>(null);
   protected readonly savingNotePlaceId = signal<string | null>(null);
 
   protected getPlaceDaySections(): PlaceDaySection[] {
@@ -57,22 +72,36 @@ export class TripPlacesComponent {
   }
 
   protected removePlace(place: TripPlace) {
-    if (!confirm(`Remove ${place.name} from this trip?`)) {
-      return;
-    }
-
-    this.message.set('');
-    this.deletingPlaceId.set(place.id);
-
-    this.placesService
-      .deletePlace(place.id)
-      .pipe(finalize(() => this.deletingPlaceId.set(null)))
-      .subscribe({
-        next: () => {
-          this.placesChanged.emit((this.trip.places ?? []).filter((item) => item.id !== place.id));
-          this.message.set('Place removed from this trip.');
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        data: {
+          title: 'Remove place?',
+          message: `Remove ${place.name} from this trip?`,
+          confirmLabel: 'Remove place',
+          confirmClass: 'app-danger-button',
         },
-        error: () => this.message.set('Could not remove this place. Please try again.'),
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+
+        this.message.set('');
+        this.deletingPlaceId.set(place.id);
+
+        this.placesService
+          .deletePlace(place.id)
+          .pipe(finalize(() => this.deletingPlaceId.set(null)))
+          .subscribe({
+            next: () => {
+              this.placesChanged.emit(
+                (this.trip.places ?? []).filter((item) => item.id !== place.id),
+              );
+              this.message.set('Place removed from this trip.');
+            },
+            error: () => this.message.set('Could not remove this place. Please try again.'),
+          });
       });
   }
 
@@ -80,14 +109,14 @@ export class TripPlacesComponent {
     this.message.set('');
     this.editingNotePlaceId.set(place.id);
     this.noteDraft.set(place.note ?? '');
-    this.plannedTimeDraft.set(this.toTimeInputValue(place.plannedTime));
+    this.plannedTimeDraft.set(this.toTimeDraftValue(place.plannedTime));
     this.durationMinutesDraft.set(place.durationMinutes?.toString() ?? '');
   }
 
   protected cancelNoteEdit() {
     this.editingNotePlaceId.set(null);
     this.noteDraft.set('');
-    this.plannedTimeDraft.set('');
+    this.plannedTimeDraft.set(null);
     this.durationMinutesDraft.set('');
   }
 
@@ -95,7 +124,7 @@ export class TripPlacesComponent {
     this.noteDraft.set(value);
   }
 
-  protected updatePlannedTimeDraft(value: string) {
+  protected updatePlannedTimeDraft(value: Date | null) {
     this.plannedTimeDraft.set(value);
   }
 
@@ -104,6 +133,11 @@ export class TripPlacesComponent {
   }
 
   protected savePlaceDetails(place: TripPlace) {
+    if (this.hasInvalidPlaceDetails()) {
+      this.message.set('Use 15-minute steps for planned time and duration.');
+      return;
+    }
+
     const note = this.noteDraft().trim();
     const plannedTime = this.toPlaceRequestTime(this.plannedTimeDraft());
     const durationMinutes = this.toDurationMinutes(this.durationMinutesDraft());
@@ -240,6 +274,40 @@ export class TripPlacesComponent {
     );
   }
 
+  protected hasInvalidPlaceDetails() {
+    return this.isPlannedTimeStepInvalid() || this.isDurationMinutesStepInvalid();
+  }
+
+  protected isPlannedTimeStepInvalid() {
+    const plannedTime = this.plannedTimeDraft();
+
+    if (!plannedTime) {
+      return false;
+    }
+
+    return (
+      plannedTime.getMinutes() % 15 !== 0 ||
+      plannedTime.getSeconds() !== 0 ||
+      plannedTime.getMilliseconds() !== 0
+    );
+  }
+
+  protected isDurationMinutesStepInvalid() {
+    const trimmedValue = this.durationMinutesDraft().trim();
+
+    if (!trimmedValue) {
+      return false;
+    }
+
+    const durationMinutes = Number(trimmedValue);
+
+    return (
+      !Number.isInteger(durationMinutes) ||
+      durationMinutes < 0 ||
+      durationMinutes % 15 !== 0
+    );
+  }
+
   private getPlacesForDay(places: TripPlace[], dayNumber: number | null) {
     return places
       .filter((place) => place.dayNumber === dayNumber)
@@ -321,17 +389,22 @@ export class TripPlacesComponent {
     }
 
     const durationMinutes = Number(trimmedValue);
-    return Number.isFinite(durationMinutes) && durationMinutes >= 0
+    return Number.isFinite(durationMinutes) &&
+      durationMinutes >= 0 &&
+      durationMinutes % 15 === 0
       ? Math.trunc(durationMinutes)
       : null;
   }
 
-  private toPlaceRequestTime(value: string) {
+  private toPlaceRequestTime(value: Date | null) {
     if (!value) {
       return null;
     }
 
-    return value.slice(0, 5);
+    return `${value.getHours().toString().padStart(2, '0')}:${value
+      .getMinutes()
+      .toString()
+      .padStart(2, '0')}`;
   }
 
   private toTimeInputValue(value: string | null | undefined) {
@@ -341,5 +414,23 @@ export class TripPlacesComponent {
 
     const timeParts = value.replace('Z', '').split(':');
     return timeParts.length >= 2 ? `${timeParts[0]}:${timeParts[1]}` : '';
+  }
+
+  private toTimeDraftValue(value: string | null | undefined) {
+    const timeValue = this.toTimeInputValue(value);
+
+    if (!timeValue) {
+      return null;
+    }
+
+    const [hours, minutes] = timeValue.split(':').map((part) => Number(part));
+
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+      return null;
+    }
+
+    const plannedTime = new Date();
+    plannedTime.setHours(hours, minutes, 0, 0);
+    return plannedTime;
   }
 }

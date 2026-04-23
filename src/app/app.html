@@ -1,18 +1,51 @@
 <header class="topbar">
   <a class="brand" routerLink="/">TripPlanner</a>
 
-  <nav aria-label="Primary navigation">
-    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Home</a>
+  <div class="topbar-side">
+    <mat-nav-list class="nav-list" aria-label="Primary navigation">
+      <a
+        mat-list-item
+        routerLink="/"
+        routerLinkActive="active-link"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Home
+      </a>
+
+      @if (currentUser()) {
+        <a mat-list-item routerLink="/trips" routerLinkActive="active-link">Trips</a>
+        <a
+          mat-list-item
+          routerLink="/logout"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Logout
+        </a>
+      } @else {
+        <a
+          mat-list-item
+          routerLink="/login"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Login
+        </a>
+        <a
+          mat-list-item
+          routerLink="/register"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Register
+        </a>
+      }
+    </mat-nav-list>
 
     @if (currentUser(); as user) {
-      <a routerLink="/trips" routerLinkActive="active">Trips</a>
-      <span class="user-chip">{{ user.firstName }} {{ user.lastName }}</span>
-      <button type="button" (click)="logout()">Logout</button>
-    } @else {
-      <a routerLink="/login" routerLinkActive="active">Login</a>
-      <a routerLink="/register" routerLinkActive="active">Register</a>
+      <p class="user-name">{{ user.firstName }} {{ user.lastName }}</p>
     }
-  </nav>
+  </div>
 </header>
 
 <router-outlet />

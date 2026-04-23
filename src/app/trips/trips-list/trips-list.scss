@@ -68,25 +68,6 @@ dd {
 
 .details-link {
   width: fit-content;
-  color: #1e7257;
-  font-weight: 900;
-}
-
-.delete-button {
-  min-height: 40px;
-  padding: 0 14px;
-  color: #ffffff;
-  background: #b3261e;
-  border: 0;
-  border-radius: 8px;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.delete-button:disabled {
-  cursor: wait;
-  opacity: 0.72;
 }
 
 .trip-card h2 {
@@ -137,17 +118,8 @@ dd {
   border-radius: 8px;
 }
 
-.status-panel button {
+.status-panel .app-primary-button {
   width: fit-content;
-  min-height: 42px;
-  padding: 0 16px;
-  color: #ffffff;
-  background: #1e7257;
-  border: 0;
-  border-radius: 8px;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
 }
 
 @media (max-width: 760px) {

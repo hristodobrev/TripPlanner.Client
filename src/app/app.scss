@@ -11,7 +11,7 @@
 .topbar {
   width: min(1180px, calc(100% - 40px));
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
   margin: 0 auto;
@@ -25,54 +25,64 @@
   text-decoration: none;
 }
 
-nav {
-  display: flex;
-  flex-wrap: wrap;
+.topbar-side {
+  width: auto;
+  display: grid;
   gap: 10px;
 }
 
-nav a,
-nav button,
-.user-chip {
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 14px;
-  border: 1px solid #dfe6df;
-  border-radius: 8px;
+.user-name {
+  margin: 2px 0 0;
+  color: #52615d;
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-align: right;
+  justify-self: end;
 }
 
-nav a,
-nav button {
-  color: #52615d;
-  background: rgba(255, 255, 255, 0.72);
-  font-weight: 800;
+.nav-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+}
+
+.nav-list a[mat-list-item] {
+  width: auto;
+  min-height: 34px;
+  border-radius: 999px;
   text-decoration: none;
 }
 
-nav button {
-  font: inherit;
-  cursor: pointer;
-}
-
-nav a.active,
-nav a:hover,
-nav button:hover {
-  color: #ffffff;
-  background: #1e7257;
-  border-color: #1e7257;
-}
-
-.user-chip {
-  color: #18211f;
-  background: #ffffff;
+.nav-list a[mat-list-item] .mdc-list-item__primary-text {
+  color: #52615d;
   font-weight: 800;
+}
+
+.nav-list a[mat-list-item].active-link {
+  background: #1e7257;
+  color: #ffffff;
+  --mdc-list-list-item-label-text-color: #ffffff;
+  --mdc-list-list-item-supporting-text-color: #ffffff;
 }
 
 @media (max-width: 620px) {
   .topbar {
     width: min(100% - 28px, 680px);
-    align-items: flex-start;
     flex-direction: column;
+  }
+
+  .topbar-side {
+    width: 100%;
+  }
+
+  .user-name {
+    text-align: left;
+    justify-self: start;
+  }
+
+  .nav-list {
+    width: 100%;
   }
 }

@@ -1,6 +1,12 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatNativeDateModule } from '@angular/material/core';
+import { Router } from '@angular/router';
 import { catchError, debounceTime, distinctUntilChanged, finalize, of, switchMap, tap } from 'rxjs';
 
 import { PlaceAutocompleteOption } from '../places/place-autocomplete.models';
@@ -10,7 +16,14 @@ import { TripsService } from '../trips/trips.service';
 
 @Component({
   selector: 'app-home',
-  imports: [ReactiveFormsModule],
+  imports: [
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatDatepickerModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatNativeDateModule,
+  ],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
@@ -18,6 +31,7 @@ export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly formBuilder = inject(FormBuilder);
   private readonly placesAutocompleteService = inject(PlacesAutocompleteService);
+  private readonly router = inject(Router);
   private readonly tripsService = inject(TripsService);
 
   protected readonly isSearchingPlaces = signal(false);
@@ -26,11 +40,11 @@ export class HomeComponent {
   protected readonly placeOptions = signal<PlaceAutocompleteOption[]>([]);
   protected readonly selectedPlace = signal<PlaceAutocompleteOption | null>(null);
 
-  protected readonly tripForm = this.formBuilder.nonNullable.group({
+  protected readonly tripForm = this.formBuilder.group({
     destination: ['', [Validators.required]],
-    startDate: ['', [Validators.required]],
-    endDate: ['', [Validators.required]],
-    description: '',
+    startDate: [null as Date | null, [Validators.required]],
+    endDate: [null as Date | null, [Validators.required]],
+    description: [''],
   });
 
   protected readonly tripIdeas = [
@@ -63,7 +77,7 @@ export class HomeComponent {
           this.selectedPlace.set(null);
         }),
         switchMap((query) => {
-          const trimmedQuery = query.trim();
+          const trimmedQuery = (query ?? '').trim();
 
           if (trimmedQuery.length < 2) {
             this.isSearchingPlaces.set(false);
@@ -109,16 +123,16 @@ export class HomeComponent {
       .addTrip(request)
       .pipe(finalize(() => this.isSubmittingTrip.set(false)))
       .subscribe({
-        next: () => {
+        next: (tripId) => {
           this.tripForm.reset({
             destination: '',
-            startDate: '',
-            endDate: '',
+            startDate: null,
+            endDate: null,
             description: '',
           });
           this.selectedPlace.set(null);
           this.placeOptions.set([]);
-          this.formMessage.set('Trip added.');
+          void this.router.navigate(['/trips', tripId]);
         },
         error: () => this.formMessage.set('Could not add the trip. Please try again.'),
       });
@@ -147,7 +161,7 @@ export class HomeComponent {
 
     return {
       name: this.formatPlace(place),
-      description: formValue.description.trim(),
+      description: (formValue.description ?? '').trim(),
       placeId: place.placeId,
       placeName: place.mainText,
       startDate,
@@ -155,11 +169,13 @@ export class HomeComponent {
     };
   }
 
-  private toUtcIsoDate(date: string) {
+  private toUtcIsoDate(date: Date | null) {
     if (!date) {
       return null;
     }
 
-    return new Date(`${date}T00:00:00.000Z`).toISOString();
+    return new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0),
+    ).toISOString();
   }
 }

@@ -14,7 +14,7 @@ export interface PlaceSearchResult {
 
 export interface AddPlaceRequest {
   tripId: string;
-  externalPlaceId: string;
+  externalId: string;
   name: string;
 }
 

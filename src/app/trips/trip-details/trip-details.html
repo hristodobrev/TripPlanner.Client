@@ -30,7 +30,13 @@
         </div>
       </dl>
 
-      <button class="danger-button" type="button" [disabled]="deletingTrip()" (click)="deleteTrip()">
+      <button
+        mat-flat-button
+        class="app-danger-button"
+        type="button"
+        [disabled]="deletingTrip()"
+        (click)="deleteTrip()"
+      >
         {{ deletingTrip() ? 'Deleting trip...' : 'Delete trip' }}
       </button>
     </section>

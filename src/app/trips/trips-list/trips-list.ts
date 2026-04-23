@@ -1,18 +1,22 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog';
 import { Trip } from '../trip.models';
 import { TripsService } from '../trips.service';
 
 @Component({
   selector: 'app-trips-list',
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, MatButtonModule],
   templateUrl: './trips-list.html',
   styleUrl: './trips-list.scss',
 })
 export class TripsListComponent {
+  private readonly dialog = inject(MatDialog);
   private readonly tripsService = inject(TripsService);
 
   protected readonly isLoading = signal(true);
@@ -42,19 +46,31 @@ export class TripsListComponent {
   }
 
   protected deleteTrip(trip: Trip) {
-    if (!confirm(`Delete ${trip.name}?`)) {
-      return;
-    }
+    this.dialog
+      .open(ConfirmDialogComponent, {
+        data: {
+          title: 'Delete trip?',
+          message: `Delete ${trip.name}?`,
+          confirmLabel: 'Delete trip',
+          confirmClass: 'app-danger-button',
+        },
+      })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
 
-    this.errorMessage.set('');
-    this.deletingTripId.set(trip.id);
+        this.errorMessage.set('');
+        this.deletingTripId.set(trip.id);
 
-    this.tripsService
-      .deleteTrip(trip.id)
-      .pipe(finalize(() => this.deletingTripId.set(null)))
-      .subscribe({
-        next: () => this.trips.update((trips) => trips.filter((item) => item.id !== trip.id)),
-        error: () => this.errorMessage.set('Could not delete this trip. Please try again.'),
+        this.tripsService
+          .deleteTrip(trip.id)
+          .pipe(finalize(() => this.deletingTripId.set(null)))
+          .subscribe({
+            next: () => this.trips.update((trips) => trips.filter((item) => item.id !== trip.id)),
+            error: () => this.errorMessage.set('Could not delete this trip. Please try again.'),
+          });
       });
   }
 }

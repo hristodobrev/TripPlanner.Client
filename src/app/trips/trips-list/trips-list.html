@@ -10,7 +10,7 @@
   } @else if (errorMessage()) {
     <section class="status-panel" aria-live="polite">
       <p>{{ errorMessage() }}</p>
-      <button type="button" (click)="loadTrips()">Try again</button>
+      <button mat-flat-button class="app-primary-button" type="button" (click)="loadTrips()">Try again</button>
     </section>
   } @else if (trips().length === 0) {
     <section class="status-panel">
@@ -45,9 +45,16 @@
           </dl>
 
           <div class="trip-actions">
-            <a class="details-link" [routerLink]="['/trips', trip.id]">Open trip</a>
+            <a
+              mat-stroked-button
+              class="app-secondary-button details-link"
+              [routerLink]="['/trips', trip.id]"
+            >
+              Open trip
+            </a>
             <button
-              class="delete-button"
+              mat-flat-button
+              class="app-danger-button"
               type="button"
               [disabled]="deletingTripId() === trip.id"
               (click)="deleteTrip(trip)"

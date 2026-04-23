@@ -8,7 +8,7 @@ export class TripsService {
   private readonly http = inject(HttpClient);
 
   addTrip(request: AddTripRequest) {
-    return this.http.post('/api/Trips', request);
+    return this.http.post<string>('/api/Trips', request);
   }
 
   getTrips() {

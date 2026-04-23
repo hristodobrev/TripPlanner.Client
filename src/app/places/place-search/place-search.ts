@@ -1,6 +1,9 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, EventEmitter, inject, Input, Output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { finalize } from 'rxjs';
 
 import { TripPlace } from '../../trips/trip.models';
@@ -9,7 +12,7 @@ import { PlacesService } from '../places.service';
 
 @Component({
   selector: 'app-place-search',
-  imports: [DecimalPipe, ReactiveFormsModule],
+  imports: [DecimalPipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './place-search.html',
   styleUrl: './place-search.scss',
 })
@@ -64,7 +67,7 @@ export class PlaceSearchComponent {
     this.placesService
       .addPlace({
         tripId: this.tripId,
-        externalPlaceId: place.externalPlaceId,
+        externalId: place.externalPlaceId,
         name: place.name,
       })
       .pipe(finalize(() => this.addingPlaceExternalId.set(null)))

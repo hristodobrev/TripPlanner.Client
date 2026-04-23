@@ -12,13 +12,19 @@
     <form class="trip-form" [formGroup]="tripForm" (ngSubmit)="submitTrip()" aria-label="Add trip">
       <div class="destination-field">
         <label for="destination">Destination</label>
-        <input
-          id="destination"
-          type="text"
-          formControlName="destination"
-          placeholder="Where are you going?"
-          autocomplete="off"
-        />
+        <mat-form-field appearance="outline">
+          <input
+            id="destination"
+            matInput
+            type="text"
+            formControlName="destination"
+            placeholder="Where are you going?"
+            autocomplete="off"
+          />
+          @if (tripForm.controls.destination.touched && !selectedPlace()) {
+            <mat-error>Choose a destination from the list.</mat-error>
+          }
+        </mat-form-field>
 
         @if (isSearchingPlaces()) {
           <p class="places-status">Searching places...</p>
@@ -39,38 +45,44 @@
           </ul>
         }
 
-        @if (tripForm.controls.destination.touched && !selectedPlace()) {
-          <span class="field-error">Choose a destination from the list.</span>
-        }
       </div>
 
-      <div class="trip-form__row">
-        <label>
-          Start date
-          <input type="date" formControlName="startDate" />
-          @if (tripForm.controls.startDate.touched && tripForm.controls.startDate.invalid) {
-            <span class="field-error">Start date is required.</span>
+      <div class="trip-form__date-range">
+        <label for="trip-date-range">Trip dates</label>
+        <mat-form-field appearance="outline" class="date-range-field">
+          <mat-date-range-input [rangePicker]="tripDateRangePicker">
+            <input
+              id="trip-date-range"
+              matStartDate
+              formControlName="startDate"
+              placeholder="Start date"
+            />
+            <input matEndDate formControlName="endDate" placeholder="End date" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matIconSuffix [for]="tripDateRangePicker"></mat-datepicker-toggle>
+          <mat-date-range-picker #tripDateRangePicker></mat-date-range-picker>
+          @if (
+            (tripForm.controls.startDate.touched && tripForm.controls.startDate.invalid) ||
+            (tripForm.controls.endDate.touched && tripForm.controls.endDate.invalid)
+          ) {
+            <mat-error>Choose a start and end date.</mat-error>
           }
-        </label>
-        <label>
-          End date
-          <input type="date" formControlName="endDate" />
-          @if (tripForm.controls.endDate.touched && tripForm.controls.endDate.invalid) {
-            <span class="field-error">End date is required.</span>
-          }
-        </label>
+        </mat-form-field>
       </div>
 
       <label>
         Description
-        <textarea
-          formControlName="description"
-          placeholder="Add notes, plans, or reminders."
-          rows="4"
-        ></textarea>
+        <mat-form-field appearance="outline">
+          <textarea
+            matInput
+            formControlName="description"
+            placeholder="Add notes, plans, or reminders."
+            rows="4"
+          ></textarea>
+        </mat-form-field>
       </label>
 
-      <button type="submit" [disabled]="isSubmittingTrip()">
+      <button mat-flat-button class="app-primary-button" type="submit" [disabled]="isSubmittingTrip()">
         {{ isSubmittingTrip() ? 'Adding trip...' : 'Add trip' }}
       </button>
 

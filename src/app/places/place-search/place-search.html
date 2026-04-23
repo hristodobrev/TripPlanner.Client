@@ -7,12 +7,19 @@
   <form [formGroup]="searchForm" (ngSubmit)="searchPlaces()">
     <label>
       Search
-      <input type="text" formControlName="query" placeholder="Restaurants, museums, parks..." />
-      @if (searchForm.controls.query.touched && searchForm.controls.query.invalid) {
-        <span>Enter a search term.</span>
-      }
+      <mat-form-field appearance="outline">
+        <input
+          matInput
+          type="text"
+          formControlName="query"
+          placeholder="Restaurants, museums, parks..."
+        />
+        @if (searchForm.controls.query.touched && searchForm.controls.query.invalid) {
+          <mat-error>Enter a search term.</mat-error>
+        }
+      </mat-form-field>
     </label>
-    <button type="submit" [disabled]="isSearchingPlaces()">
+    <button mat-flat-button class="app-primary-button" type="submit" [disabled]="isSearchingPlaces()">
       {{ isSearchingPlaces() ? 'Searching...' : 'Search' }}
     </button>
   </form>
@@ -52,6 +59,8 @@
         }
 
         <button
+          mat-flat-button
+          class="app-primary-button"
           type="button"
           [disabled]="addingPlaceExternalId() === place.externalPlaceId || isPlaceAdded(place)"
           (click)="addPlace(place)"

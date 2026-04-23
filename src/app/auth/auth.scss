@@ -65,15 +65,8 @@ label {
   font-weight: 700;
 }
 
-input {
-  min-width: 0;
-  height: 48px;
-  padding: 0 14px;
-  color: #18211f;
-  background: #f7f8f4;
-  border: 1px solid #cbd6cf;
-  border-radius: 8px;
-  font: inherit;
+mat-form-field {
+  width: 100%;
 }
 
 span {
@@ -81,21 +74,8 @@ span {
   font-size: 0.8rem;
 }
 
-button {
-  height: 50px;
+.app-primary-button {
   margin-top: 6px;
-  color: #ffffff;
-  background: #1e7257;
-  border: 0;
-  border-radius: 8px;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-button:disabled {
-  cursor: wait;
-  opacity: 0.72;
 }
 
 .auth-message {
