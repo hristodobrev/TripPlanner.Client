@@ -69,6 +69,10 @@ ul {
   list-style: none;
 }
 
+.place-list {
+  min-height: 24px;
+}
+
 li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -78,21 +82,15 @@ li {
   background: #ffffff;
   border: 1px solid #dfe6df;
   border-radius: 8px;
-  cursor: grab;
   transition:
     border-color 0.2s ease,
-    opacity 0.2s ease,
-    transform 0.2s ease;
+    opacity 0.2s ease;
 }
 
 li.dragging {
   opacity: 0.5;
   border-color: #1e7257;
   transform: scale(0.99);
-}
-
-li:active {
-  cursor: grabbing;
 }
 
 .place-content {
@@ -139,6 +137,35 @@ strong {
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.35;
+}
+
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.cdk-drag-animating {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.cdk-drag-preview {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #dfe6df;
+  border-radius: 8px;
+  box-shadow: 0 18px 42px rgba(24, 33, 31, 0.18);
 }
 
 .note-button {

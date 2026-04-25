@@ -4,29 +4,30 @@
     <h2 id="saved-places-title">Places in this trip</h2>
   </div>
 
-  <div class="day-sections">
-    @for (section of getPlaceDaySections(); track trackDaySection($index, section)) {
-      <section
-        class="day-section"
-        [class.empty]="section.places.length === 0"
-        (dragover)="allowPlaceDrop($event)"
-        (drop)="dropPlace($event, section.dayNumber)"
-      >
+  <div class="day-sections" cdkDropListGroup>
+    @for (section of daySections(); track trackDaySection($index, section)) {
+      <section class="day-section" [class.empty]="section.places.length === 0">
         <h3>{{ section.title }}</h3>
 
-        @if (section.places.length > 0) {
-          <ul>
+        <ul
+          class="place-list"
+          cdkDropList
+          [id]="getDaySectionId(section.dayNumber)"
+          [cdkDropListData]="section.places"
+          (cdkDropListDropped)="dropPlace($event, section.dayNumber)"
+        >
+          @if (section.places.length > 0) {
             @for (place of section.places; track trackTripPlace($index, place)) {
               <li
-                draggable="true"
+                cdkDrag
+                [cdkDragData]="place"
+                [cdkDragDisabled]="isReorderingPlaces() || editingNotePlaceId() === place.id"
                 [class.dragging]="draggedPlaceId() === place.id"
-                (dragstart)="startPlaceDrag($event, place)"
-                (dragover)="allowPlaceDrop($event)"
-                (drop)="dropPlace($event, section.dayNumber, place)"
-                (dragend)="endPlaceDrag()"
+                (cdkDragStarted)="startPlaceDrag(place)"
+                (cdkDragEnded)="endPlaceDrag()"
               >
                 <div class="place-content">
-                  <span class="drag-handle" aria-hidden="true">Drag</span>
+                  <span class="drag-handle" cdkDragHandle aria-hidden="true">Drag</span>
                   <strong>{{ place.name }}</strong>
                   @if (hasPlaceDetails(place)) {
                     <div class="place-details">
@@ -141,8 +142,10 @@
                 }
               </li>
             }
-          </ul>
-        } @else {
+          }
+        </ul>
+
+        @if (section.places.length === 0) {
           <p>Drop places here.</p>
         }
       </section>

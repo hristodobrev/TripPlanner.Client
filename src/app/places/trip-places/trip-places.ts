@@ -1,4 +1,5 @@
-import { Component, EventEmitter, inject, Input, Output, signal } from '@angular/core';
+import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -22,6 +23,7 @@ interface PlaceDaySection {
 @Component({
   selector: 'app-trip-places',
   imports: [
+    DragDropModule,
     PlaceSearchComponent,
     MatButtonModule,
     MatFormFieldModule,
@@ -42,6 +44,7 @@ export class TripPlacesComponent {
 
   protected readonly draggedPlaceId = signal<string | null>(null);
   protected readonly deletingPlaceId = signal<string | null>(null);
+  protected readonly daySections = signal<PlaceDaySection[]>([]);
   protected readonly editingNotePlaceId = signal<string | null>(null);
   protected readonly durationMinutesDraft = signal('');
   protected readonly isReorderingPlaces = signal(false);
@@ -50,25 +53,16 @@ export class TripPlacesComponent {
   protected readonly plannedTimeDraft = signal<Date | null>(null);
   protected readonly savingNotePlaceId = signal<string | null>(null);
 
-  protected getPlaceDaySections(): PlaceDaySection[] {
-    const places = this.trip.places ?? [];
-    const sections: PlaceDaySection[] = [
-      {
-        dayNumber: null,
-        title: 'Unscheduled',
-        places: this.getPlacesForDay(places, null),
-      },
-    ];
+  ngOnChanges(_: SimpleChanges) {
+    const tripPlaces = this.trip?.places ?? [];
+    const currentPlaces = this.flattenSections(this.daySections());
 
-    for (let dayNumber = 0; dayNumber < this.trip.durationInDays; dayNumber += 1) {
-      sections.push({
-        dayNumber,
-        title: `Day ${dayNumber + 1}`,
-        places: this.getPlacesForDay(places, dayNumber),
-      });
+    if (
+      this.daySections().length !== this.trip.durationInDays + 1 ||
+      !this.arePlacesEquivalent(currentPlaces, tripPlaces)
+    ) {
+      this.daySections.set(this.buildSections(tripPlaces));
     }
-
-    return sections;
   }
 
   protected removePlace(place: TripPlace) {
@@ -95,9 +89,9 @@ export class TripPlacesComponent {
           .pipe(finalize(() => this.deletingPlaceId.set(null)))
           .subscribe({
             next: () => {
-              this.placesChanged.emit(
-                (this.trip.places ?? []).filter((item) => item.id !== place.id),
-              );
+              const updatedPlaces = this.getCurrentPlaces().filter((item) => item.id !== place.id);
+              this.daySections.set(this.buildSections(updatedPlaces));
+              this.placesChanged.emit(updatedPlaces);
               this.message.set('Place removed from this trip.');
             },
             error: () => this.message.set('Could not remove this place. Please try again.'),
@@ -155,18 +149,18 @@ export class TripPlacesComponent {
       .pipe(finalize(() => this.savingNotePlaceId.set(null)))
       .subscribe({
         next: () => {
-          this.placesChanged.emit(
-            (this.trip.places ?? []).map((item) =>
-              item.id === place.id
-                ? {
-                    ...item,
-                    note: note || null,
-                    plannedTime: plannedTime || null,
-                    durationMinutes,
-                  }
-                : item,
-            ),
+          const updatedPlaces = this.getCurrentPlaces().map((item) =>
+            item.id === place.id
+              ? {
+                  ...item,
+                  note: note || null,
+                  plannedTime: plannedTime || null,
+                  durationMinutes,
+                }
+              : item,
           );
+          this.daySections.set(this.buildSections(updatedPlaces));
+          this.placesChanged.emit(updatedPlaces);
           this.cancelNoteEdit();
           this.message.set('Place details saved.');
         },
@@ -174,76 +168,51 @@ export class TripPlacesComponent {
       });
   }
 
-  protected startPlaceDrag(event: DragEvent, place: TripPlace) {
+  protected startPlaceDrag(place: TripPlace) {
     this.draggedPlaceId.set(place.id);
-    event.dataTransfer?.setData('text/plain', place.id);
-    event.dataTransfer?.setDragImage(event.currentTarget as Element, 16, 16);
   }
 
-  protected allowPlaceDrop(event: DragEvent) {
-    event.preventDefault();
-  }
+  protected dropPlace(event: CdkDragDrop<TripPlace[]>, targetDayNumber: number | null) {
+    const draggedPlace = event.item.data as TripPlace | undefined;
 
-  protected dropPlace(event: DragEvent, targetDayNumber: number | null, targetPlace?: TripPlace) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const draggedPlaceId = this.draggedPlaceId() || event.dataTransfer?.getData('text/plain');
-
-    if (!draggedPlaceId || draggedPlaceId === targetPlace?.id) {
+    if (
+      !draggedPlace ||
+      (event.previousContainer === event.container && event.previousIndex === event.currentIndex)
+    ) {
       this.draggedPlaceId.set(null);
       return;
     }
 
-    const draggedPlace = (this.trip.places ?? []).find((place) => place.id === draggedPlaceId);
-
-    if (!draggedPlace) {
-      this.draggedPlaceId.set(null);
-      return;
-    }
-
-    const sourceSection = this.getPlaceDaySections().find(
-      (section) => section.dayNumber === draggedPlace.dayNumber,
+    const previousPlaces = this.getCurrentPlaces();
+    const currentSections = this.daySections();
+    const targetSection = currentSections.find(
+      (section) => this.getDaySectionId(section.dayNumber) === event.container.id,
     );
-    const sourceIndex =
-      sourceSection?.places.findIndex((place) => place.id === draggedPlaceId) ?? -1;
-    const originalTargetIndex = targetPlace
-      ? sourceSection?.places.findIndex((place) => place.id === targetPlace.id) ?? -1
-      : -1;
-
-    const nextSections = this.getPlaceDaySections().map((section) => ({
-      ...section,
-      places: section.places.filter((place) => place.id !== draggedPlaceId),
-    }));
-    const targetSection = nextSections.find((section) => section.dayNumber === targetDayNumber);
 
     if (!targetSection) {
       this.draggedPlaceId.set(null);
       return;
     }
 
-    const targetIndex = targetPlace
-      ? targetSection.places.findIndex((place) => place.id === targetPlace.id)
-      : targetSection.places.length;
-    const insertIndex =
-      targetPlace &&
-      draggedPlace.dayNumber === targetDayNumber &&
-      sourceIndex >= 0 &&
-      originalTargetIndex >= 0 &&
-      sourceIndex < originalTargetIndex
-        ? targetIndex + 1
-        : targetIndex;
+    if (event.previousContainer === event.container) {
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      transferArrayItem(
+        event.previousContainer.data,
+        event.container.data,
+        event.previousIndex,
+        event.currentIndex,
+      );
+    }
 
-    targetSection.places.splice(insertIndex >= 0 ? insertIndex : targetSection.places.length, 0, {
-      ...draggedPlace,
-      dayNumber: targetDayNumber,
-    });
-
+    const nextSections = currentSections.map((section) => ({ ...section }));
+    const targetId = this.getTargetId(event, targetSection.places);
     this.draggedPlaceId.set(null);
-    this.savePlaceOrder(nextSections, {
+    this.daySections.set(nextSections);
+    this.savePlaceOrder(nextSections, previousPlaces, {
       dayNumber: targetDayNumber,
-      sourceId: draggedPlaceId,
-      targetId: targetPlace?.id ?? null,
+      sourceId: draggedPlace.id,
+      targetId,
     });
   }
 
@@ -252,7 +221,9 @@ export class TripPlacesComponent {
   }
 
   protected addPlaceLocally(place: TripPlace) {
-    this.placesChanged.emit([...(this.trip.places ?? []), place]);
+    const updatedPlaces = [...this.getCurrentPlaces(), place];
+    this.daySections.set(this.buildSections(updatedPlaces));
+    this.placesChanged.emit(updatedPlaces);
   }
 
   protected trackTripPlace(_: number, place: TripPlace) {
@@ -261,6 +232,10 @@ export class TripPlacesComponent {
 
   protected trackDaySection(_: number, section: PlaceDaySection) {
     return section.dayNumber ?? 'unscheduled';
+  }
+
+  protected getDaySectionId(dayNumber: number | null) {
+    return dayNumber === null ? 'day-unscheduled' : `day-${dayNumber}`;
   }
 
   protected formatPlannedTime(plannedTime: string | null | undefined) {
@@ -314,22 +289,33 @@ export class TripPlacesComponent {
       .sort((first, second) => first.order - second.order);
   }
 
+  private getTargetId(event: CdkDragDrop<TripPlace[]>, places: TripPlace[]) {
+    if (places.length <= 1) {
+      return null;
+    }
+
+    if (event.previousContainer === event.container) {
+      if (event.previousIndex < event.currentIndex) {
+        return places[event.currentIndex - 1]?.id ?? null;
+      }
+
+      if (event.previousIndex > event.currentIndex) {
+        return places[event.currentIndex + 1]?.id ?? null;
+      }
+
+      return null;
+    }
+
+    return places[event.currentIndex + 1]?.id ?? places[event.currentIndex - 1]?.id ?? null;
+  }
+
   private savePlaceOrder(
     sections: PlaceDaySection[],
+    previousPlaces: TripPlace[],
     movedPlace: { dayNumber: number | null; sourceId: string; targetId: string | null },
   ) {
-    const previousPlaces = this.trip.places ?? [];
-    const nextPlaces = sections.flatMap((section) =>
-      section.places.map((place, index) => ({
-        ...place,
-        dayNumber: section.dayNumber,
-        order: index + 1,
-      })),
-    );
-
     this.message.set('');
     this.isReorderingPlaces.set(true);
-    this.placesChanged.emit(nextPlaces);
 
     this.placesService
       .reorderPlace({
@@ -341,30 +327,31 @@ export class TripPlacesComponent {
       .pipe(finalize(() => this.isReorderingPlaces.set(false)))
       .subscribe({
         next: (places) => {
-          this.placesChanged.emit(this.mapReorderedPlaces(places));
+          const updatedPlaces = this.mergeReorderedPlaces(places);
+          this.daySections.set(this.buildSections(updatedPlaces));
+          this.placesChanged.emit(updatedPlaces);
           this.message.set('Places reordered.');
         },
         error: () => {
+          this.daySections.set(this.buildSections(previousPlaces));
           this.placesChanged.emit(previousPlaces);
           this.message.set('Could not reorder places. Please try again.');
         },
       });
   }
 
-  private mapReorderedPlaces(places: TripPlaceResponse[]) {
-    const dayOrderMap = new Map<string, number>();
+  private mergeReorderedPlaces(places: TripPlaceResponse[]) {
+    const derivedOrderByDay = new Map<number | null, number>();
 
     return places.map((place) => {
-      const dayKey = place.dayNumber?.toString() ?? 'unscheduled';
-      const order = (dayOrderMap.get(dayKey) ?? 0) + 1;
-
-      dayOrderMap.set(dayKey, order);
+      const nextDerivedOrder = (derivedOrderByDay.get(place.dayNumber) ?? 0) + 1;
+      derivedOrderByDay.set(place.dayNumber, nextDerivedOrder);
 
       return {
         id: place.id,
         name: place.name,
+        order: nextDerivedOrder,
         dayNumber: place.dayNumber,
-        order,
         note: place.note,
         durationMinutes: place.durationMinutes,
         plannedTime: place.plannedTime,
@@ -373,12 +360,60 @@ export class TripPlacesComponent {
   }
 
   protected getExistingPlaceNames() {
-    return (this.trip.places ?? []).map((place) => place.name);
+    return this.getCurrentPlaces().map((place) => place.name);
   }
 
   protected getNextUnscheduledOrder() {
-    const unscheduledPlaces = (this.trip.places ?? []).filter((place) => place.dayNumber === null);
+    const unscheduledPlaces = this.getCurrentPlaces().filter((place) => place.dayNumber === null);
     return Math.max(0, ...unscheduledPlaces.map((place) => place.order)) + 1;
+  }
+
+  private getCurrentPlaces() {
+    return this.flattenSections(this.daySections());
+  }
+
+  private buildSections(places: TripPlace[]) {
+    const sections: PlaceDaySection[] = [
+      {
+        dayNumber: null,
+        title: 'Unscheduled',
+        places: this.getPlacesForDay(places, null),
+      },
+    ];
+
+    for (let dayNumber = 0; dayNumber < this.trip.durationInDays; dayNumber += 1) {
+      sections.push({
+        dayNumber,
+        title: `Day ${dayNumber + 1}`,
+        places: this.getPlacesForDay(places, dayNumber),
+      });
+    }
+
+    return sections;
+  }
+
+  private flattenSections(sections: PlaceDaySection[]) {
+    return sections.flatMap((section) => section.places);
+  }
+
+  private arePlacesEquivalent(first: TripPlace[], second: TripPlace[]) {
+    if (first.length !== second.length) {
+      return false;
+    }
+
+    return first.every((place, index) => {
+      const other = second[index];
+
+      return (
+        other &&
+        place.id === other.id &&
+        place.order === other.order &&
+        place.dayNumber === other.dayNumber &&
+        (place.note ?? null) === (other.note ?? null) &&
+        (place.plannedTime ?? null) === (other.plannedTime ?? null) &&
+        (place.durationMinutes ?? null) === (other.durationMinutes ?? null)
+      );
+    });
   }
 
   private toDurationMinutes(value: string) {

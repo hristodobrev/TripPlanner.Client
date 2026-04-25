@@ -50,21 +50,10 @@
 
 .nav-list a[mat-list-item] {
   width: auto;
-  min-height: 34px;
-  border-radius: 999px;
-  text-decoration: none;
-}
-
-.nav-list a[mat-list-item] .mdc-list-item__primary-text {
-  color: #52615d;
-  font-weight: 800;
 }
 
 .nav-list a[mat-list-item].active-link {
   background: #1e7257;
-  color: #ffffff;
-  --mdc-list-list-item-label-text-color: #ffffff;
-  --mdc-list-list-item-supporting-text-color: #ffffff;
 }
 
 @media (max-width: 620px) {
