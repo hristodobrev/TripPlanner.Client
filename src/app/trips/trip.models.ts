@@ -9,9 +9,19 @@ export interface AddTripRequest {
 
 export interface TripPlace {
   id: string;
+  externalPlaceId?: string | null;
+  formattedAddress?: string | null;
   name: string;
   order: number;
   dayNumber: number | null;
+  locality?: string | null;
+  country?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  rating?: number | null;
+  websiteUri?: string | null;
+  userRatingCount?: number | null;
+  primaryTypeDisplayName?: string | null;
   note?: string | null;
   durationMinutes?: number | null;
   plannedTime?: string | null;

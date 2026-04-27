@@ -7,12 +7,13 @@ import { finalize, switchMap } from 'rxjs';
 
 import { TripPlacesComponent } from '../../places/trip-places/trip-places';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog';
+import { TripMapComponent } from '../trip-map/trip-map';
 import { Trip, TripPlace } from '../trip.models';
 import { TripsService } from '../trips.service';
 
 @Component({
   selector: 'app-trip-details',
-  imports: [DatePipe, RouterLink, TripPlacesComponent, MatButtonModule],
+  imports: [DatePipe, RouterLink, TripPlacesComponent, TripMapComponent, MatButtonModule],
   templateUrl: './trip-details.html',
   styleUrl: './trip-details.scss',
 })
@@ -81,5 +82,11 @@ export class TripDetailsComponent {
 
   protected updateTripPlaces(places: TripPlace[]) {
     this.trip.update((trip) => (trip ? { ...trip, places } : trip));
+  }
+
+  protected addTripPlace(place: TripPlace) {
+    this.trip.update((trip) =>
+      trip ? { ...trip, places: [...(trip.places ?? []), place] } : trip,
+    );
   }
 }

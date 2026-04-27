@@ -2,6 +2,8 @@ export interface PlaceSearchResult {
   id: string;
   externalPlaceId: string;
   name: string;
+  photoUrls?: string[] | null;
+  formattedAddress?: string | null;
   locality: string;
   country: string;
   latitude: number;
@@ -10,6 +12,25 @@ export interface PlaceSearchResult {
   websiteUri: string;
   userRatingCount: number;
   primaryTypeDisplayName: string;
+}
+
+export interface PlaceDetailsResponse {
+  id: string;
+  externalPlaceId: string;
+  photoUrls?: string[] | null;
+  formattedAddress: string | null;
+  name: string;
+  locality: string | null;
+  country: string | null;
+  latitude: number;
+  longitude: number;
+  rating: number | null;
+  websiteUri: string | null;
+  userRatingCount: number | null;
+  primaryTypeDisplayName: string | null;
+  note?: string | null;
+  durationMinutes?: number | null;
+  plannedTime?: string | null;
 }
 
 export interface AddPlaceRequest {

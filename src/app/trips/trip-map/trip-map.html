@@ -1,0 +1,130 @@
+<section class="trip-map-card" aria-labelledby="trip-map-title">
+  <div class="trip-map-header">
+    <div>
+      <p class="eyebrow">Trip map</p>
+      <h2 id="trip-map-title">Places on the map</h2>
+    </div>
+
+    @if (!isLoadingMap() && places.length > 0) {
+      <p class="trip-map-summary">{{ places.length }} places</p>
+    }
+  </div>
+
+  <div class="trip-map-shell">
+    <div #mapHost class="trip-map-canvas" aria-label="Map of trip places"></div>
+
+    @if (selectedPlace() || selectedPlaceLoading() || selectedPlaceError()) {
+      <aside class="trip-map-panel" aria-live="polite">
+        <div class="trip-map-panel-header">
+          <p class="eyebrow">Place details</p>
+          <button
+            class="trip-map-panel-close"
+            type="button"
+            aria-label="Close place details"
+            (click)="closePlacePanel()"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        @if (selectedPlaceLoading()) {
+          <p class="trip-map-panel-message">Loading place...</p>
+        } @else if (selectedPlaceError()) {
+          <p class="trip-map-panel-message">{{ selectedPlaceError() }}</p>
+        } @else if (selectedPlace(); as place) {
+          <div class="trip-map-panel-content">
+            @if (place.photoUrls?.length) {
+              <div class="trip-map-gallery" aria-label="Place photos">
+                <div class="trip-map-gallery-item">
+                  <img [src]="getSelectedPhotoUrl()" [alt]="place.name" loading="lazy" />
+
+                  @if (hasMultipleSelectedPhotos()) {
+                    <button
+                      type="button"
+                      class="trip-map-gallery-nav trip-map-gallery-nav-prev"
+                      aria-label="Previous photo"
+                      (click)="showPreviousPhoto()"
+                    >
+                      <mat-icon>chevron_left</mat-icon>
+                    </button>
+                    <button
+                      type="button"
+                      class="trip-map-gallery-nav trip-map-gallery-nav-next"
+                      aria-label="Next photo"
+                      (click)="showNextPhoto()"
+                    >
+                      <mat-icon>chevron_right</mat-icon>
+                    </button>
+                  }
+                </div>
+
+                @if (hasMultipleSelectedPhotos()) {
+                  <p class="trip-map-gallery-count">
+                    {{ selectedPhotoIndex() + 1 }} / {{ getSelectedPhotoCount() }}
+                  </p>
+                }
+              </div>
+            }
+
+            <h3>{{ place.name }}</h3>
+
+            @if (place.primaryTypeDisplayName) {
+              <p>{{ place.primaryTypeDisplayName }}</p>
+            }
+
+            @if (formatSelectedPlaceTime() || place.durationMinutes !== null) {
+              <div class="trip-map-meta">
+                @if (formatSelectedPlaceTime()) {
+                  <span>{{ formatSelectedPlaceTime() }}</span>
+                }
+                @if (place.durationMinutes !== null) {
+                  <span>{{ place.durationMinutes }} min</span>
+                }
+              </div>
+            }
+
+            @if (place.formattedAddress) {
+              <p>{{ place.formattedAddress }}</p>
+            }
+
+            @if (place.rating) {
+              <p>
+                Rating {{ place.rating }}
+                @if (place.userRatingCount) {
+                  <span>({{ place.userRatingCount }})</span>
+                }
+              </p>
+            }
+
+            @if (place.note) {
+              <p>{{ place.note }}</p>
+            }
+
+            @if (selectedPlaceCanAdd()) {
+              <button
+                class="trip-map-panel-action"
+                type="button"
+                [disabled]="addingPlaceId() === place.externalPlaceId"
+                (click)="addSelectedPlaceToTrip()"
+              >
+                {{ addingPlaceId() === place.externalPlaceId ? 'Adding...' : 'Add to trip' }}
+              </button>
+            } @else if (hasSelectedPlaceAlreadyAdded()) {
+              <p class="trip-map-panel-message">Already added to this trip.</p>
+            }
+          </div>
+        }
+      </aside>
+    }
+
+    @if (isLoadingMap()) {
+      <div class="trip-map-overlay">
+        <p>Loading map...</p>
+      </div>
+    }
+  </div>
+
+  @if (mapError()) {
+    <p class="trip-map-message">{{ mapError() }}</p>
+  }
+</section>

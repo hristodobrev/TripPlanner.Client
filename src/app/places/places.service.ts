@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 
 import {
   AddPlaceRequest,
+  PlaceDetailsResponse,
   PlaceSearchResult,
   ReorderPlaceRequest,
   TripPlaceResponse,
@@ -17,6 +18,10 @@ export class PlacesService {
     const encodedPlaceId = encodeURIComponent(placeId);
     const encodedQuery = encodeURIComponent(query);
     return this.http.get<PlaceSearchResult[]>(`/api/Places/${encodedPlaceId}/${encodedQuery}`);
+  }
+
+  getPlace(placeId: string) {
+    return this.http.get<PlaceDetailsResponse>(`/api/Places/${encodeURIComponent(placeId)}`);
   }
 
   addPlace(request: AddPlaceRequest) {

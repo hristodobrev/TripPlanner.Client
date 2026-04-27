@@ -37,6 +37,39 @@
   <section class="places-grid" aria-label="Place search results">
     @for (place of searchResults(); track trackPlace($index, place)) {
       <article class="place-card">
+        <div class="place-card-media">
+          @if (getSelectedPhotoUrl(place); as photoUrl) {
+            <img [src]="photoUrl" [alt]="place.name" loading="lazy" />
+
+            @if (hasMultiplePhotos(place)) {
+              <button
+                type="button"
+                class="place-card-media-nav place-card-media-nav-prev"
+                aria-label="Previous photo"
+                (click)="showPreviousPhoto(place)"
+              >
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <button
+                type="button"
+                class="place-card-media-nav place-card-media-nav-next"
+                aria-label="Next photo"
+                (click)="showNextPhoto(place)"
+              >
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            }
+          } @else {
+            <div class="place-card-media-fallback" aria-hidden="true">No photo</div>
+          }
+        </div>
+
+        @if (hasMultiplePhotos(place)) {
+          <p class="place-card-media-count">
+            {{ getSelectedPhotoIndex(place) + 1 }} / {{ place.photoUrls?.length }}
+          </p>
+        }
+
         <div>
           <p class="place-type">{{ place.primaryTypeDisplayName || 'Place' }}</p>
           <h3>{{ place.name }}</h3>

@@ -41,6 +41,12 @@
       </button>
     </section>
 
+    <app-trip-map
+      [tripId]="trip.id"
+      [places]="trip.places ?? []"
+      (placeAdded)="addTripPlace($event)"
+    />
+
     <app-trip-places
       [trip]="trip"
       (placesChanged)="updateTripPlaces($event)"
