@@ -13,47 +13,61 @@ import {
   ViewChild,
   signal,
 } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { finalize } from 'rxjs';
 
-import { PlaceDetailsResponse } from '../../places/place-search.models';
+import {
+  AccommodationSearchResult,
+  PlaceDetailsResponse,
+} from '../../places/place-search.models';
+import { PlaceSearchService } from '../../places/placesearch.service';
 import { PlacesService } from '../../places/places.service';
 import { GoogleMapsLoaderService } from '../../maps/google-maps-loader.service';
 import { TripPlace } from '../trip.models';
 
 @Component({
   selector: 'app-trip-map',
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule],
   templateUrl: './trip-map.html',
   styleUrl: './trip-map.scss',
 })
 export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private readonly mapsLoader = inject(GoogleMapsLoaderService);
+  private readonly placeSearchService = inject(PlaceSearchService);
   private readonly placesService = inject(PlacesService);
 
   @Input({ required: true }) tripId = '';
+  @Input() destinationLatitude: number | null = null;
+  @Input() destinationLongitude: number | null = null;
   @Input() places: TripPlace[] = [];
   @Output() readonly placeAdded = new EventEmitter<TripPlace>();
 
   @ViewChild('mapHost') private readonly mapHost?: ElementRef<HTMLDivElement>;
 
   protected readonly addingPlaceId = signal<string | null>(null);
+  protected readonly isLoadingAccommodations = signal(false);
   protected readonly isLoadingMap = signal(true);
   protected readonly mapError = signal('');
+  protected readonly panelContentScrollable = signal(false);
   protected readonly selectedPlace = signal<PlaceDetailsResponse | null>(null);
   protected readonly selectedPlaceCanAdd = signal(false);
-  protected readonly selectedPlaceError = signal('');
-  protected readonly selectedPlaceLoading = signal(false);
   protected readonly selectedPhotoIndex = signal(0);
 
+  private panelContentResizeObserver: ResizeObserver | null = null;
+  private panelContentElement: HTMLDivElement | null = null;
   private isViewReady = false;
+  private accommodationHoverInfoWindow: any | null = null;
+  private accommodationMarkers: any[] = [];
   private map: any | null = null;
+  private mapClickListener: any | null = null;
   private markers: any[] = [];
   private selectedPlaceMarker: any | null = null;
   private renderSequence = 0;
 
   ngAfterViewInit() {
     this.isViewReady = true;
+    this.observePanelContent();
     void this.renderMap();
   }
 
@@ -66,16 +80,57 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.panelContentResizeObserver?.disconnect();
+    this.mapClickListener?.remove?.();
     this.clearMarkers();
+    this.clearAccommodationMarkers();
     this.clearSelectedPlaceMarker();
+  }
+
+  @ViewChild('panelContent')
+  private set panelContentRef(content: ElementRef<HTMLDivElement> | undefined) {
+    this.panelContentElement = content?.nativeElement ?? null;
+    this.observePanelContent();
+  }
+
+  protected searchAccommodations() {
+    if (this.hasAccommodationMarkers()) {
+      this.clearAccommodationMarkers();
+      return;
+    }
+
+    if (!this.map || this.isLoadingAccommodations()) {
+      return;
+    }
+
+    const center = this.map.getCenter?.();
+    const latitude = center?.lat?.();
+    const longitude = center?.lng?.();
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      this.mapError.set('Could not determine the current map center.');
+      return;
+    }
+
+    this.mapError.set('');
+    this.isLoadingAccommodations.set(true);
+
+    this.placeSearchService
+      .getAccommodations(latitude, longitude)
+      .pipe(finalize(() => this.isLoadingAccommodations.set(false)))
+      .subscribe({
+        next: async (places) => {
+          await this.renderAccommodationMarkers(places);
+        },
+        error: () => this.mapError.set('Could not load accommodations for this area.'),
+      });
   }
 
   protected closePlacePanel() {
     this.selectedPlace.set(null);
     this.selectedPlaceCanAdd.set(false);
-    this.selectedPlaceError.set('');
-    this.selectedPlaceLoading.set(false);
     this.selectedPhotoIndex.set(0);
+    this.panelContentScrollable.set(false);
     this.clearSelectedPlaceMarker();
   }
 
@@ -86,12 +141,12 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       return;
     }
 
-    this.addingPlaceId.set(place.externalPlaceId);
+    this.addingPlaceId.set(place.externalId);
 
     this.placesService
       .addPlace({
         tripId: this.tripId,
-        externalId: place.externalPlaceId,
+        externalId: place.externalId,
         name: place.name,
       })
       .pipe(finalize(() => this.addingPlaceId.set(null)))
@@ -107,7 +162,7 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
           this.placeAdded.emit({
             id: createdPlaceId,
-            externalPlaceId: place.externalPlaceId,
+            externalPlaceId: place.externalId,
             formattedAddress: place.formattedAddress,
             name: place.name,
             order: nextOrder,
@@ -126,20 +181,62 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
           });
 
           this.selectedPlaceCanAdd.set(false);
+          this.refreshPanelScrollability();
         },
-        error: () => this.selectedPlaceError.set('Could not add this place to the trip.'),
+        error: () => this.mapError.set('Could not add this place to the trip.'),
       });
   }
 
   protected hasSelectedPlaceAlreadyAdded() {
     const place = this.selectedPlace();
 
-    return !!place && this.places.some((tripPlace) => tripPlace.externalPlaceId === place.externalPlaceId);
+    return !!place && this.places.some((tripPlace) => tripPlace.externalPlaceId === place.externalId);
+  }
+
+  protected getSelectedPlaceMarkerNumber() {
+    const place = this.selectedPlace();
+
+    if (!place) {
+      return null;
+    }
+
+    const markerIndex = this.getMappablePlaces().findIndex(
+      (tripPlace) => tripPlace.externalPlaceId === place.externalId,
+    );
+
+    return markerIndex >= 0 ? markerIndex + 1 : null;
   }
 
   protected formatSelectedPlaceTime() {
     const place = this.selectedPlace();
     return place?.plannedTime ? this.toTimeDisplay(place.plannedTime) : '';
+  }
+
+  protected formatSelectedPlaceReviewCount() {
+    const reviewCount = this.selectedPlace()?.userRatingCount;
+
+    if (!reviewCount) {
+      return '';
+    }
+
+    return `${new Intl.NumberFormat('en', {
+      notation: reviewCount >= 1000 ? 'compact' : 'standard',
+      maximumFractionDigits: 1,
+    }).format(reviewCount)} reviews`;
+  }
+
+  protected getSelectedPlaceWebsiteLabel() {
+    const websiteUri = this.selectedPlace()?.websiteUri;
+
+    if (!websiteUri) {
+      return '';
+    }
+
+    try {
+      return new URL(websiteUri).hostname.replace(/^www\./, '');
+    } catch {
+      return websiteUri;
+    }
   }
 
   protected getSelectedPhotoUrl() {
@@ -182,6 +279,10 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.selectedPhotoIndex.update((index) => (index + 1) % photoCount);
   }
 
+  protected hasAccommodationMarkers() {
+    return this.accommodationMarkers.length > 0;
+  }
+
   private async renderMap() {
     const mapHost = this.mapHost?.nativeElement;
 
@@ -206,35 +307,22 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       const { AdvancedMarkerElement, PinElement } = (await googleRef.maps.importLibrary(
         'marker',
       )) as any;
+      this.accommodationHoverInfoWindow ??= new googleRef.maps.InfoWindow();
 
       if (!this.map) {
         this.map = new Map(mapHost, {
-          center: { lat: 20, lng: 0 },
-          zoom: 2,
+          center: this.getDefaultMapCenter(),
+          zoom: this.hasDestinationViewport() ? 12 : 2,
           mapId: 'DEMO_MAP_ID',
           mapTypeControl: false,
           streetViewControl: false,
-          fullscreenControl: true,
+          fullscreenControl: false,
           gestureHandling: 'greedy',
         });
       }
 
-      const mappedPlaces = this.getMappablePlaces();
-
-      if (currentRender !== this.renderSequence) {
-        return;
-      }
-
-      this.clearMarkers();
-
-      if (mappedPlaces.length === 0) {
-        this.map.setCenter({ lat: 20, lng: 0 });
-        this.map.setZoom(2);
-        this.mapError.set(this.places.length > 0 ? 'No coordinates available for saved places.' : '');
-        return;
-      }
-
-      this.map.addListener('click', (event: any) => {
+      this.mapClickListener?.remove?.();
+      this.mapClickListener = this.map.addListener('click', (event: any) => {
         if (!event?.placeId) {
           return;
         }
@@ -246,6 +334,21 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
           '+',
         );
       });
+
+      const mappedPlaces = this.getMappablePlaces();
+
+      if (currentRender !== this.renderSequence) {
+        return;
+      }
+
+      this.clearMarkers();
+
+      if (mappedPlaces.length === 0) {
+        this.map.setCenter(this.getDefaultMapCenter());
+        this.map.setZoom(this.hasDestinationViewport() ? 12 : 2);
+        this.mapError.set(this.places.length > 0 ? 'No coordinates available for saved places.' : '');
+        return;
+      }
 
       const bounds = new googleRef.maps.LatLngBounds();
 
@@ -289,25 +392,23 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private loadPlaceDetails(placeId: string, canAdd: boolean, glyph: string) {
-    this.selectedPlace.set(null);
     this.selectedPlaceCanAdd.set(canAdd);
-    this.selectedPlaceError.set('');
-    this.selectedPlaceLoading.set(true);
     this.selectedPhotoIndex.set(0);
+    this.mapError.set('');
 
-    this.placesService
+    this.placeSearchService
       .getPlace(placeId)
-      .pipe(finalize(() => this.selectedPlaceLoading.set(false)))
       .subscribe({
         next: (place) => {
           this.selectedPlace.set(place);
           this.selectedPlaceCanAdd.set(
-            canAdd && !this.places.some((tripPlace) => tripPlace.externalPlaceId === place.externalPlaceId),
+            canAdd && !this.places.some((tripPlace) => tripPlace.externalPlaceId === place.externalId),
           );
           this.selectedPhotoIndex.set(0);
+          this.refreshPanelScrollability();
           void this.updateSelectedPlaceMarker(place, glyph);
         },
-        error: () => this.selectedPlaceError.set('Could not load place details.'),
+        error: () => this.mapError.set('Could not load place details.'),
       });
   }
 
@@ -321,6 +422,26 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     );
   }
 
+  private hasDestinationViewport() {
+    return (
+      typeof this.destinationLatitude === 'number' &&
+      Number.isFinite(this.destinationLatitude) &&
+      typeof this.destinationLongitude === 'number' &&
+      Number.isFinite(this.destinationLongitude)
+    );
+  }
+
+  private getDefaultMapCenter() {
+    if (this.hasDestinationViewport()) {
+      return {
+        lat: this.destinationLatitude as number,
+        lng: this.destinationLongitude as number,
+      };
+    }
+
+    return { lat: 20, lng: 0 };
+  }
+
   private toTimeDisplay(value: string) {
     const timeParts = value.replace('Z', '').split(':');
     return timeParts.length >= 2 ? `${timeParts[0]}:${timeParts[1]}` : value;
@@ -331,6 +452,85 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       marker.map = null;
     });
     this.markers = [];
+  }
+
+  private clearAccommodationMarkers() {
+    this.accommodationMarkers.forEach((marker) => {
+      marker.map = null;
+    });
+    this.accommodationMarkers = [];
+    this.accommodationHoverInfoWindow?.close();
+  }
+
+  private async renderAccommodationMarkers(places: AccommodationSearchResult[]) {
+    if (!this.map) {
+      return;
+    }
+
+    const googleRef = (window as any).google;
+    const { AdvancedMarkerElement, PinElement } = (await googleRef.maps.importLibrary(
+      'marker',
+    )) as any;
+
+    this.clearAccommodationMarkers();
+
+    places.forEach((place) => {
+      const pin = new PinElement({
+        glyph: 'H',
+        glyphColor: '#ffffff',
+        background: '#2a6fd6',
+        borderColor: '#1f57ab',
+      });
+
+      const marker = new AdvancedMarkerElement({
+        map: this.map,
+        position: {
+          lat: place.latitude,
+          lng: place.longitude,
+        },
+        title: this.buildAccommodationTooltipText(place),
+        content: pin.element,
+      });
+
+      marker.addListener('mouseover', () => {
+        this.accommodationHoverInfoWindow?.setContent(this.buildAccommodationTooltipHtml(place));
+        this.accommodationHoverInfoWindow?.open({
+          anchor: marker,
+          map: this.map,
+        });
+      });
+
+      marker.addListener('mouseout', () => {
+        this.accommodationHoverInfoWindow?.close();
+      });
+
+      marker.addListener('click', () => {
+        this.accommodationHoverInfoWindow?.close();
+        this.loadPlaceDetails(
+          place.externalPlaceId,
+          !this.places.some((tripPlace) => tripPlace.externalPlaceId === place.externalPlaceId),
+          'H',
+        );
+      });
+
+      this.accommodationMarkers.push(marker);
+    });
+  }
+
+  private buildAccommodationTooltipText(place: AccommodationSearchResult) {
+    return place.rating ? `${place.name} - ${place.rating}` : place.name;
+  }
+
+  private buildAccommodationTooltipHtml(place: AccommodationSearchResult) {
+    const ratingText = place.rating
+      ? `<div style="margin-top:4px;color:#52615d;font-size:12px;line-height:1.4;">Rating ${place.rating}</div>`
+      : '';
+    return `
+      <div style="padding:2px 0;font-family:Roboto, Arial, sans-serif;">
+        <strong>${this.escapeHtml(place.name)}</strong>
+        ${ratingText}
+      </div>
+    `;
   }
 
   private async updateSelectedPlaceMarker(place: PlaceDetailsResponse, glyph = '+') {
@@ -372,5 +572,40 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
     this.selectedPlaceMarker.map = null;
     this.selectedPlaceMarker = null;
+  }
+
+  private observePanelContent() {
+    const panelContent = this.panelContentElement;
+
+    if (!panelContent || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    this.panelContentResizeObserver?.disconnect();
+    this.panelContentResizeObserver = new ResizeObserver(() => this.refreshPanelScrollability());
+    this.panelContentResizeObserver.observe(panelContent);
+    this.refreshPanelScrollability();
+  }
+
+  private refreshPanelScrollability() {
+    requestAnimationFrame(() => {
+      const panelContent = this.panelContentElement;
+
+      if (!panelContent) {
+        this.panelContentScrollable.set(false);
+        return;
+      }
+
+      this.panelContentScrollable.set(panelContent.scrollHeight > panelContent.clientHeight + 1);
+    });
+  }
+
+  private escapeHtml(value: string) {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 }

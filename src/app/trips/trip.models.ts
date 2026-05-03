@@ -7,6 +7,12 @@ export interface AddTripRequest {
   endDate: string;
 }
 
+export enum PlaceStatus {
+  Planned = 1,
+  Visited = 2,
+  Skipped = 3,
+}
+
 export interface TripPlace {
   id: string;
   externalPlaceId?: string | null;
@@ -25,6 +31,7 @@ export interface TripPlace {
   note?: string | null;
   durationMinutes?: number | null;
   plannedTime?: string | null;
+  status?: PlaceStatus | null;
 }
 
 export interface Trip {
@@ -35,6 +42,8 @@ export interface Trip {
   endDate: string;
   durationInDays: number;
   destinationExternalId: string;
+  destinationLatitude?: number | null;
+  destinationLongitude?: number | null;
   places?: TripPlace[];
   createdAtUtc: string;
 }

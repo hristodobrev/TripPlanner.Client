@@ -2,7 +2,8 @@ import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, switchMap } from 'rxjs';
 
 import { TripPlacesComponent } from '../../places/trip-places/trip-places';
@@ -13,7 +14,7 @@ import { TripsService } from '../trips.service';
 
 @Component({
   selector: 'app-trip-details',
-  imports: [DatePipe, RouterLink, TripPlacesComponent, TripMapComponent, MatButtonModule],
+  imports: [DatePipe, TripPlacesComponent, TripMapComponent, MatButtonModule, MatIconModule],
   templateUrl: './trip-details.html',
   styleUrl: './trip-details.scss',
 })

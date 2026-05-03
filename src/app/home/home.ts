@@ -10,7 +10,7 @@ import { Router } from '@angular/router';
 import { catchError, debounceTime, distinctUntilChanged, finalize, of, switchMap, tap } from 'rxjs';
 
 import { PlaceAutocompleteOption } from '../places/place-autocomplete.models';
-import { PlacesAutocompleteService } from '../places/places-autocomplete.service';
+import { PlaceSearchService } from '../places/placesearch.service';
 import { AddTripRequest } from '../trips/trip.models';
 import { TripsService } from '../trips/trips.service';
 
@@ -30,7 +30,7 @@ import { TripsService } from '../trips/trips.service';
 export class HomeComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly placesAutocompleteService = inject(PlacesAutocompleteService);
+  private readonly placeSearchService = inject(PlaceSearchService);
   private readonly router = inject(Router);
   private readonly tripsService = inject(TripsService);
 
@@ -86,7 +86,7 @@ export class HomeComponent {
           }
 
           this.isSearchingPlaces.set(true);
-          return this.placesAutocompleteService.search(trimmedQuery).pipe(
+          return this.placeSearchService.searchAutocomplete(trimmedQuery).pipe(
             catchError(() => of([])),
             finalize(() => this.isSearchingPlaces.set(false)),
           );

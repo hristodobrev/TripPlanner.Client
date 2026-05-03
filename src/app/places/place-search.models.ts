@@ -2,7 +2,7 @@ export interface PlaceSearchResult {
   id: string;
   externalPlaceId: string;
   name: string;
-  photoUrls?: string[] | null;
+  photoUrl?: string | null;
   formattedAddress?: string | null;
   locality: string;
   country: string;
@@ -16,7 +16,7 @@ export interface PlaceSearchResult {
 
 export interface PlaceDetailsResponse {
   id: string;
-  externalPlaceId: string;
+  externalId: string;
   photoUrls?: string[] | null;
   formattedAddress: string | null;
   name: string;
@@ -33,6 +33,15 @@ export interface PlaceDetailsResponse {
   plannedTime?: string | null;
 }
 
+export interface AccommodationSearchResult {
+  externalPlaceId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  rating: number | null;
+  userRatingCount: number | null;
+}
+
 export interface AddPlaceRequest {
   tripId: string;
   externalId: string;
@@ -44,6 +53,11 @@ export interface UpdatePlaceRequest {
   note?: string;
   plannedTime?: string;
   durationMinutes?: number;
+  status?: number;
+}
+
+export interface UpdatePlaceStatusRequest {
+  status: number;
 }
 
 export interface ReorderPlaceRequest {
@@ -60,4 +74,5 @@ export interface TripPlaceResponse {
   note: string | null;
   durationMinutes: number | null;
   plannedTime: string | null;
+  status?: number | null;
 }

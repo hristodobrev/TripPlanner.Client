@@ -12,7 +12,7 @@ import { PlaceSearchComponent } from '../place-search/place-search';
 import { TripPlaceResponse } from '../place-search.models';
 import { PlacesService } from '../places.service';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog';
-import { Trip, TripPlace } from '../../trips/trip.models';
+import { PlaceStatus, Trip, TripPlace } from '../../trips/trip.models';
 
 interface PlaceDaySection {
   dayNumber: number | null;
@@ -52,6 +52,7 @@ export class TripPlacesComponent {
   protected readonly noteDraft = signal('');
   protected readonly plannedTimeDraft = signal<Date | null>(null);
   protected readonly savingNotePlaceId = signal<string | null>(null);
+  protected readonly savingStatusPlaceId = signal<string | null>(null);
 
   ngOnChanges(_: SimpleChanges) {
     const tripPlaces = this.trip?.places ?? [];
@@ -124,6 +125,45 @@ export class TripPlacesComponent {
 
   protected updateDurationMinutesDraft(value: string) {
     this.durationMinutesDraft.set(value);
+  }
+
+  protected cyclePlaceStatus(place: TripPlace) {
+    this.updatePlaceStatus(place, this.getNextPlaceStatus(place.status ?? PlaceStatus.Planned));
+  }
+
+  protected updatePlaceStatus(place: TripPlace, status: PlaceStatus) {
+    if (this.savingStatusPlaceId() === place.id || place.status === status) {
+      return;
+    }
+
+    const previousPlaces = this.getCurrentPlaces();
+    const updatedPlaces = previousPlaces.map((item) =>
+      item.id === place.id
+        ? {
+            ...item,
+            status,
+          }
+        : item,
+    );
+
+    this.message.set('');
+    this.savingStatusPlaceId.set(place.id);
+    this.daySections.set(this.buildSections(updatedPlaces));
+    this.placesChanged.emit(updatedPlaces);
+
+    this.placesService
+      .updatePlaceStatus(place.id, status)
+      .pipe(finalize(() => this.savingStatusPlaceId.set(null)))
+      .subscribe({
+        next: () => {
+          this.message.set('Place status updated.');
+        },
+        error: () => {
+          this.daySections.set(this.buildSections(previousPlaces));
+          this.placesChanged.emit(previousPlaces);
+          this.message.set('Could not update place status. Please try again.');
+        },
+      });
   }
 
   protected savePlaceDetails(place: TripPlace) {
@@ -244,9 +284,48 @@ export class TripPlacesComponent {
 
   protected hasPlaceDetails(place: TripPlace) {
     return Boolean(
+      place.status ||
       place.plannedTime ||
         (place.durationMinutes !== null && place.durationMinutes !== undefined),
     );
+  }
+
+  protected getPlaceStatusLabel(status: PlaceStatus | number | null | undefined) {
+    switch (status) {
+      case PlaceStatus.Planned:
+        return 'Planned';
+      case PlaceStatus.Visited:
+        return 'Visited';
+      case PlaceStatus.Skipped:
+        return 'Skipped';
+      default:
+        return '';
+    }
+  }
+
+  protected getPlaceStatusClass(status: PlaceStatus | number | null | undefined) {
+    switch (status) {
+      case PlaceStatus.Planned:
+        return 'status-planned';
+      case PlaceStatus.Visited:
+        return 'status-visited';
+      case PlaceStatus.Skipped:
+        return 'status-skipped';
+      default:
+        return '';
+    }
+  }
+
+  protected getPlaceStatusIcon(status: PlaceStatus | number | null | undefined) {
+    switch (status) {
+      case PlaceStatus.Visited:
+        return 'check_circle_outline';
+      case PlaceStatus.Skipped:
+        return 'forward_circle';
+      case PlaceStatus.Planned:
+      default:
+        return 'radio_button_unchecked';
+    }
   }
 
   protected hasInvalidPlaceDetails() {
@@ -287,6 +366,18 @@ export class TripPlacesComponent {
     return places
       .filter((place) => place.dayNumber === dayNumber)
       .sort((first, second) => first.order - second.order);
+  }
+
+  private getNextPlaceStatus(status: PlaceStatus) {
+    switch (status) {
+      case PlaceStatus.Planned:
+        return PlaceStatus.Visited;
+      case PlaceStatus.Visited:
+        return PlaceStatus.Skipped;
+      case PlaceStatus.Skipped:
+      default:
+        return PlaceStatus.Planned;
+    }
   }
 
   private getTargetId(event: CdkDragDrop<TripPlace[]>, places: TripPlace[]) {
@@ -341,13 +432,16 @@ export class TripPlacesComponent {
   }
 
   private mergeReorderedPlaces(places: TripPlaceResponse[]) {
+    const existingPlacesById = new Map(this.getCurrentPlaces().map((place) => [place.id, place]));
     const derivedOrderByDay = new Map<number | null, number>();
 
     return places.map((place) => {
+      const existingPlace = existingPlacesById.get(place.id);
       const nextDerivedOrder = (derivedOrderByDay.get(place.dayNumber) ?? 0) + 1;
       derivedOrderByDay.set(place.dayNumber, nextDerivedOrder);
 
       return {
+        ...existingPlace,
         id: place.id,
         name: place.name,
         order: nextDerivedOrder,
@@ -355,6 +449,7 @@ export class TripPlacesComponent {
         note: place.note,
         durationMinutes: place.durationMinutes,
         plannedTime: place.plannedTime,
+        status: place.status ?? null,
       };
     });
   }
@@ -409,6 +504,7 @@ export class TripPlacesComponent {
         place.id === other.id &&
         place.order === other.order &&
         place.dayNumber === other.dayNumber &&
+        (place.status ?? null) === (other.status ?? null) &&
         (place.note ?? null) === (other.note ?? null) &&
         (place.plannedTime ?? null) === (other.plannedTime ?? null) &&
         (place.durationMinutes ?? null) === (other.durationMinutes ?? null)

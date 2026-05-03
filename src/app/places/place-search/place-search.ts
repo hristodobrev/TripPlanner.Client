@@ -3,33 +3,28 @@ import { Component, EventEmitter, inject, Input, Output, signal } from '@angular
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { finalize } from 'rxjs';
 
 import { TripPlace } from '../../trips/trip.models';
 import { PlaceSearchResult } from '../place-search.models';
+import { PlaceSearchService } from '../placesearch.service';
 import { PlacesService } from '../places.service';
 
 @Component({
   selector: 'app-place-search',
-  imports: [
-    DecimalPipe,
-    ReactiveFormsModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-  ],
+  imports: [DecimalPipe, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './place-search.html',
   styleUrl: './place-search.scss',
 })
 export class PlaceSearchComponent {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly placeSearchService = inject(PlaceSearchService);
   private readonly placesService = inject(PlacesService);
 
   @Input({ required: true }) tripId!: string;
-  @Input({ required: true }) destinationExternalId!: string;
+  @Input() destinationLatitude: number | null = null;
+  @Input() destinationLongitude: number | null = null;
   @Input() existingPlaceNames: string[] = [];
   @Input() nextOrder = 1;
 
@@ -38,7 +33,6 @@ export class PlaceSearchComponent {
   protected readonly addingPlaceExternalId = signal<string | null>(null);
   protected readonly isSearchingPlaces = signal(false);
   protected readonly message = signal('');
-  protected readonly photoIndexes = signal<Record<string, number>>({});
   protected readonly searchError = signal('');
   protected readonly searchResults = signal<PlaceSearchResult[]>([]);
 
@@ -54,25 +48,26 @@ export class PlaceSearchComponent {
       return;
     }
 
-    if (!this.destinationExternalId) {
-      this.searchError.set('This trip does not have a destination id for place search.');
+    if (
+      this.destinationLatitude === null ||
+      this.destinationLongitude === null ||
+      !Number.isFinite(this.destinationLatitude) ||
+      !Number.isFinite(this.destinationLongitude)
+    ) {
+      this.searchError.set('This trip does not have destination coordinates for place search.');
       return;
     }
 
     this.isSearchingPlaces.set(true);
-    this.placesService
-      .searchPlaces(this.destinationExternalId, this.searchForm.controls.query.value.trim())
+    this.placeSearchService
+      .searchPlaces(
+        this.destinationLatitude,
+        this.destinationLongitude,
+        this.searchForm.controls.query.value.trim(),
+      )
       .pipe(finalize(() => this.isSearchingPlaces.set(false)))
       .subscribe({
-        next: (places) => {
-          this.searchResults.set(places);
-          this.photoIndexes.set(
-            places.reduce<Record<string, number>>((accumulator, place) => {
-              accumulator[place.externalPlaceId] = 0;
-              return accumulator;
-            }, {}),
-          );
-        },
+        next: (places) => this.searchResults.set(places),
         error: () => this.searchError.set('Could not search places. Please try again.'),
       });
   }
@@ -92,9 +87,19 @@ export class PlaceSearchComponent {
         next: (response) => {
           this.placeAdded.emit({
             id: response,
+            externalPlaceId: place.externalPlaceId,
+            formattedAddress: place.formattedAddress,
             name: place.name,
             order: this.nextOrder,
             dayNumber: null,
+            locality: place.locality,
+            country: place.country,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            rating: place.rating,
+            websiteUri: place.websiteUri,
+            userRatingCount: place.userRatingCount,
+            primaryTypeDisplayName: place.primaryTypeDisplayName,
           });
           this.message.set('Place added to this trip.');
         },
@@ -108,51 +113,5 @@ export class PlaceSearchComponent {
 
   protected trackPlace(_: number, place: PlaceSearchResult) {
     return place.externalPlaceId;
-  }
-
-  protected getSelectedPhotoUrl(place: PlaceSearchResult) {
-    const photoUrls = place.photoUrls ?? [];
-
-    if (photoUrls.length === 0) {
-      return null;
-    }
-
-    const index = Math.min(this.getSelectedPhotoIndex(place), photoUrls.length - 1);
-    return photoUrls[index] ?? null;
-  }
-
-  protected getSelectedPhotoIndex(place: PlaceSearchResult) {
-    return this.photoIndexes()[place.externalPlaceId] ?? 0;
-  }
-
-  protected hasMultiplePhotos(place: PlaceSearchResult) {
-    return (place.photoUrls?.length ?? 0) > 1;
-  }
-
-  protected showPreviousPhoto(place: PlaceSearchResult) {
-    const photoCount = place.photoUrls?.length ?? 0;
-
-    if (photoCount <= 1) {
-      return;
-    }
-
-    this.photoIndexes.update((indexes) => ({
-      ...indexes,
-      [place.externalPlaceId]:
-        ((indexes[place.externalPlaceId] ?? 0) - 1 + photoCount) % photoCount,
-    }));
-  }
-
-  protected showNextPhoto(place: PlaceSearchResult) {
-    const photoCount = place.photoUrls?.length ?? 0;
-
-    if (photoCount <= 1) {
-      return;
-    }
-
-    this.photoIndexes.update((indexes) => ({
-      ...indexes,
-      [place.externalPlaceId]: ((indexes[place.externalPlaceId] ?? 0) + 1) % photoCount,
-    }));
   }
 }

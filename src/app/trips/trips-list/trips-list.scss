@@ -64,10 +64,22 @@ dd {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+  justify-content: space-between;
 }
 
 .details-link {
   width: fit-content;
+}
+
+.trip-delete-button {
+  color: #861b15;
+  background: #f8e9e7;
+}
+
+.trip-delete-button:hover,
+.trip-delete-button:focus-visible {
+  color: #ffffff;
+  background: #861b15;
 }
 
 .trip-card h2 {

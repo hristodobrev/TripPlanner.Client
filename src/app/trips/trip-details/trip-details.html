@@ -1,6 +1,4 @@
 <main class="details-page">
-  <a class="back-link" routerLink="/trips">Back to trips</a>
-
   @if (isLoadingTrip()) {
     <p class="status">Loading trip...</p>
   } @else if (tripError()) {
@@ -8,48 +6,61 @@
       <p>{{ tripError() }}</p>
     </section>
   } @else if (trip(); as trip) {
-    <section class="trip-hero" aria-labelledby="trip-title">
-      <p class="eyebrow">Trip details</p>
-      <h1 id="trip-title">{{ trip.name }}</h1>
-      @if (trip.description) {
-        <p>{{ trip.description }}</p>
-      }
+    <section class="details-layout">
+      <div class="details-sidebar">
+        <section class="trip-hero" aria-labelledby="trip-title">
+          <div class="trip-hero-header">
+            <div>
+              <p class="eyebrow">Trip details</p>
+              <h1 id="trip-title">{{ trip.name }}</h1>
+            </div>
+            <button
+              mat-icon-button
+              class="trip-delete-button"
+              type="button"
+              [disabled]="deletingTrip()"
+              aria-label="Delete trip"
+              title="Delete trip"
+              (click)="deleteTrip()"
+            >
+              <mat-icon>{{ deletingTrip() ? 'hourglass_top' : 'delete' }}</mat-icon>
+            </button>
+          </div>
+          @if (trip.description) {
+            <p>{{ trip.description }}</p>
+          }
 
-      <dl>
-        <div>
-          <dt>Start</dt>
-          <dd>{{ trip.startDate | date: 'mediumDate' }}</dd>
-        </div>
-        <div>
-          <dt>End</dt>
-          <dd>{{ trip.endDate | date: 'mediumDate' }}</dd>
-        </div>
-        <div>
-          <dt>Duration</dt>
-          <dd>{{ trip.durationInDays }} days</dd>
-        </div>
-      </dl>
+          <dl>
+            <div>
+              <dt>Start</dt>
+              <dd>{{ trip.startDate | date: 'mediumDate' }}</dd>
+            </div>
+            <div>
+              <dt>End</dt>
+              <dd>{{ trip.endDate | date: 'mediumDate' }}</dd>
+            </div>
+            <div>
+              <dt>Duration</dt>
+              <dd>{{ trip.durationInDays }} days</dd>
+            </div>
+          </dl>
+        </section>
 
-      <button
-        mat-flat-button
-        class="app-danger-button"
-        type="button"
-        [disabled]="deletingTrip()"
-        (click)="deleteTrip()"
-      >
-        {{ deletingTrip() ? 'Deleting trip...' : 'Delete trip' }}
-      </button>
+        <app-trip-places
+          [trip]="trip"
+          (placesChanged)="updateTripPlaces($event)"
+        />
+      </div>
+
+      <div class="details-map-column">
+        <app-trip-map
+          [tripId]="trip.id"
+          [destinationLatitude]="trip.destinationLatitude ?? null"
+          [destinationLongitude]="trip.destinationLongitude ?? null"
+          [places]="trip.places ?? []"
+          (placeAdded)="addTripPlace($event)"
+        />
+      </div>
     </section>
-
-    <app-trip-map
-      [tripId]="trip.id"
-      [places]="trip.places ?? []"
-      (placeAdded)="addTripPlace($event)"
-    />
-
-    <app-trip-places
-      [trip]="trip"
-      (placesChanged)="updateTripPlaces($event)"
-    />
   }
 </main>

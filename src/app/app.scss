@@ -1,6 +1,7 @@
 :host {
   display: block;
   min-height: 100dvh;
+  --app-topbar-height: 68px;
   color: #18211f;
   background:
     linear-gradient(125deg, rgba(30, 114, 87, 0.15), transparent 36%),
@@ -9,13 +10,13 @@
 }
 
 .topbar {
-  width: min(1180px, calc(100% - 40px));
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
   margin: 0 auto;
-  padding: 18px 0 0;
+  padding: 10px;
+  background-color: white;
 }
 
 .brand {
@@ -28,16 +29,6 @@
 .topbar-side {
   width: auto;
   display: grid;
-  gap: 10px;
-}
-
-.user-name {
-  margin: 2px 0 0;
-  color: #52615d;
-  font-size: 0.92rem;
-  font-weight: 800;
-  text-align: right;
-  justify-self: end;
 }
 
 .nav-list {
@@ -57,6 +48,10 @@
 }
 
 @media (max-width: 620px) {
+  :host {
+    --app-topbar-height: 132px;
+  }
+
   .topbar {
     width: min(100% - 28px, 680px);
     flex-direction: column;
@@ -64,11 +59,6 @@
 
   .topbar-side {
     width: 100%;
-  }
-
-  .user-name {
-    text-align: left;
-    justify-self: start;
   }
 
   .nav-list {

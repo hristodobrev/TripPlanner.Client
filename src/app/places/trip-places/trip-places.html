@@ -27,8 +27,36 @@
                 (cdkDragEnded)="endPlaceDrag()"
               >
                 <div class="place-content">
-                  <span class="drag-handle" cdkDragHandle aria-hidden="true">Drag</span>
-                  <strong>{{ place.name }}</strong>
+                  <div class="place-main-row">
+                    <button
+                      mat-icon-button
+                      type="button"
+                      class="drag-handle"
+                      cdkDragHandle
+                      aria-label="Drag place"
+                      title="Drag place"
+                    >
+                      <mat-icon>drag_indicator</mat-icon>
+                    </button>
+                    <strong>{{ place.name }}</strong>
+                  </div>
+                  <div class="place-status-indicator" [class]="getPlaceStatusClass(place.status ?? 1)">
+                    <button
+                      mat-icon-button
+                      type="button"
+                      class="status-button"
+                      [class.status-planned]="(place.status ?? 1) === 1"
+                      [class.status-visited]="place.status === 2"
+                      [class.status-skipped]="place.status === 3"
+                      [disabled]="savingStatusPlaceId() === place.id || isReorderingPlaces()"
+                      [attr.aria-label]="'Change status for ' + place.name"
+                      [title]="'Status: ' + getPlaceStatusLabel(place.status ?? 1)"
+                      (click)="cyclePlaceStatus(place)"
+                    >
+                      <mat-icon>{{ getPlaceStatusIcon(place.status ?? 1) }}</mat-icon>
+                    </button>
+                    <span class="place-status-label">{{ getPlaceStatusLabel(place.status ?? 1) }}</span>
+                  </div>
                   @if (hasPlaceDetails(place)) {
                     <div class="place-details">
                       @if (place.plannedTime) {
@@ -163,7 +191,8 @@
 
 <app-place-search
   [tripId]="trip.id"
-  [destinationExternalId]="trip.destinationExternalId"
+  [destinationLatitude]="trip.destinationLatitude ?? null"
+  [destinationLongitude]="trip.destinationLongitude ?? null"
   [existingPlaceNames]="getExistingPlaceNames()"
   [nextOrder]="getNextUnscheduledOrder()"
   (placeAdded)="addPlaceLocally($event)"

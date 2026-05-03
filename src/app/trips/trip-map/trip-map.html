@@ -1,22 +1,28 @@
-<section class="trip-map-card" aria-labelledby="trip-map-title">
-  <div class="trip-map-header">
-    <div>
-      <p class="eyebrow">Trip map</p>
-      <h2 id="trip-map-title">Places on the map</h2>
-    </div>
-
-    @if (!isLoadingMap() && places.length > 0) {
-      <p class="trip-map-summary">{{ places.length }} places</p>
-    }
-  </div>
-
+<section class="trip-map-card" aria-label="Trip map">
   <div class="trip-map-shell">
     <div #mapHost class="trip-map-canvas" aria-label="Map of trip places"></div>
 
-    @if (selectedPlace() || selectedPlaceLoading() || selectedPlaceError()) {
+    @if (!isLoadingMap() && places.length > 0) {
+      <div class="trip-map-map-actions">
+        <button
+          mat-icon-button
+          type="button"
+          class="trip-map-action-button"
+          [class.active]="hasAccommodationMarkers()"
+          [attr.aria-pressed]="hasAccommodationMarkers()"
+          aria-label="Toggle accommodations"
+          title="Accommodations"
+          (click)="searchAccommodations()"
+        >
+          <mat-icon>hotel</mat-icon>
+        </button>
+      </div>
+    }
+
+    @if (selectedPlace(); as place) {
       <aside class="trip-map-panel" aria-live="polite">
         <div class="trip-map-panel-header">
-          <p class="eyebrow">Place details</p>
+          <h3 class="trip-map-panel-title">{{ place.name }}</h3>
           <button
             class="trip-map-panel-close"
             type="button"
@@ -27,93 +33,104 @@
           </button>
         </div>
 
-        @if (selectedPlaceLoading()) {
-          <p class="trip-map-panel-message">Loading place...</p>
-        } @else if (selectedPlaceError()) {
-          <p class="trip-map-panel-message">{{ selectedPlaceError() }}</p>
-        } @else if (selectedPlace(); as place) {
-          <div class="trip-map-panel-content">
-            @if (place.photoUrls?.length) {
-              <div class="trip-map-gallery" aria-label="Place photos">
-                <div class="trip-map-gallery-item">
-                  <img [src]="getSelectedPhotoUrl()" [alt]="place.name" loading="lazy" />
-
-                  @if (hasMultipleSelectedPhotos()) {
-                    <button
-                      type="button"
-                      class="trip-map-gallery-nav trip-map-gallery-nav-prev"
-                      aria-label="Previous photo"
-                      (click)="showPreviousPhoto()"
-                    >
-                      <mat-icon>chevron_left</mat-icon>
-                    </button>
-                    <button
-                      type="button"
-                      class="trip-map-gallery-nav trip-map-gallery-nav-next"
-                      aria-label="Next photo"
-                      (click)="showNextPhoto()"
-                    >
-                      <mat-icon>chevron_right</mat-icon>
-                    </button>
-                  }
-                </div>
+        <div #panelContent class="trip-map-panel-content" [class.scrollable]="panelContentScrollable()">
+          <div class="trip-map-panel-body">
+          @if (place.photoUrls?.length) {
+            <div class="trip-map-gallery" aria-label="Place photos">
+              <div class="trip-map-gallery-item">
+                <img [src]="getSelectedPhotoUrl()" [alt]="place.name" loading="lazy" />
 
                 @if (hasMultipleSelectedPhotos()) {
                   <p class="trip-map-gallery-count">
                     {{ selectedPhotoIndex() + 1 }} / {{ getSelectedPhotoCount() }}
                   </p>
+                  <button
+                    type="button"
+                    class="trip-map-gallery-nav trip-map-gallery-nav-prev"
+                    aria-label="Previous photo"
+                    (click)="showPreviousPhoto()"
+                  >
+                    <mat-icon>chevron_left</mat-icon>
+                  </button>
+                  <button
+                    type="button"
+                    class="trip-map-gallery-nav trip-map-gallery-nav-next"
+                    aria-label="Next photo"
+                    (click)="showNextPhoto()"
+                  >
+                    <mat-icon>chevron_right</mat-icon>
+                  </button>
                 }
+              </div>
+            </div>
+          }
+
+          @if (place.primaryTypeDisplayName) {
+            <p class="trip-map-place-type">
+              <strong>{{ place.primaryTypeDisplayName }}</strong>
+            </p>
+          }
+
+          @if (formatSelectedPlaceTime()) {
+            <div class="trip-map-meta">
+              <span>{{ formatSelectedPlaceTime() }}</span>
+            </div>
+          }
+
+          <div class="trip-map-info-list">
+            @if (place.rating) {
+              <div class="trip-map-info-row">
+                <mat-icon>star</mat-icon>
+                <span>{{ place.rating }}</span>
               </div>
             }
 
-            <h3>{{ place.name }}</h3>
-
-            @if (place.primaryTypeDisplayName) {
-              <p>{{ place.primaryTypeDisplayName }}</p>
-            }
-
-            @if (formatSelectedPlaceTime() || place.durationMinutes !== null) {
-              <div class="trip-map-meta">
-                @if (formatSelectedPlaceTime()) {
-                  <span>{{ formatSelectedPlaceTime() }}</span>
-                }
-                @if (place.durationMinutes !== null) {
-                  <span>{{ place.durationMinutes }} min</span>
-                }
+            @if (place.userRatingCount) {
+              <div class="trip-map-info-row">
+                <mat-icon>reviews</mat-icon>
+                <span>{{ formatSelectedPlaceReviewCount() }}</span>
               </div>
             }
 
             @if (place.formattedAddress) {
-              <p>{{ place.formattedAddress }}</p>
+              <div class="trip-map-info-row trip-map-info-row-address">
+                <mat-icon>location_on</mat-icon>
+                <span>{{ place.formattedAddress }}</span>
+              </div>
             }
 
-            @if (place.rating) {
-              <p>
-                Rating {{ place.rating }}
-                @if (place.userRatingCount) {
-                  <span>({{ place.userRatingCount }})</span>
-                }
-              </p>
-            }
-
-            @if (place.note) {
-              <p>{{ place.note }}</p>
-            }
-
-            @if (selectedPlaceCanAdd()) {
-              <button
-                class="trip-map-panel-action"
-                type="button"
-                [disabled]="addingPlaceId() === place.externalPlaceId"
-                (click)="addSelectedPlaceToTrip()"
-              >
-                {{ addingPlaceId() === place.externalPlaceId ? 'Adding...' : 'Add to trip' }}
-              </button>
-            } @else if (hasSelectedPlaceAlreadyAdded()) {
-              <p class="trip-map-panel-message">Already added to this trip.</p>
+            @if (place.websiteUri) {
+              <div class="trip-map-info-row">
+                <mat-icon>language</mat-icon>
+                <a [href]="place.websiteUri" target="_blank" rel="noopener noreferrer">
+                  {{ getSelectedPlaceWebsiteLabel() }}
+                </a>
+              </div>
             }
           </div>
-        }
+
+          @if (place.note) {
+            <p class="trip-map-note">{{ place.note }}</p>
+          }
+
+          @if (selectedPlaceCanAdd()) {
+            <button
+              mat-flat-button
+              class="app-primary-button trip-map-panel-action"
+              type="button"
+              [disabled]="addingPlaceId() === place.externalId"
+              (click)="addSelectedPlaceToTrip()"
+            >
+              {{ addingPlaceId() === place.externalId ? 'Adding...' : 'Add to trip' }}
+            </button>
+          } @else if (hasSelectedPlaceAlreadyAdded()) {
+            <p class="trip-map-panel-marker">
+              <mat-icon>place</mat-icon>
+              Stop {{ getSelectedPlaceMarkerNumber() }}
+            </p>
+          }
+          </div>
+        </div>
       </aside>
     }
 

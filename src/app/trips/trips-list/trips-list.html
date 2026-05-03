@@ -53,13 +53,15 @@
               Open trip
             </a>
             <button
-              mat-flat-button
-              class="app-danger-button"
+              mat-icon-button
+              class="trip-delete-button"
               type="button"
               [disabled]="deletingTripId() === trip.id"
+              aria-label="Delete trip"
+              title="Delete trip"
               (click)="deleteTrip(trip)"
             >
-              {{ deletingTripId() === trip.id ? 'Deleting...' : 'Delete' }}
+              <mat-icon>{{ deletingTripId() === trip.id ? 'hourglass_top' : 'delete' }}</mat-icon>
             </button>
           </div>
         </article>

@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
@@ -11,7 +12,7 @@ import { TripsService } from '../trips.service';
 
 @Component({
   selector: 'app-trips-list',
-  imports: [DatePipe, RouterLink, MatButtonModule],
+  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule],
   templateUrl: './trips-list.html',
   styleUrl: './trips-list.scss',
 })
