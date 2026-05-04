@@ -55,6 +55,7 @@
       <div class="details-map-column">
         <app-trip-map
           [tripId]="trip.id"
+          [tripName]="trip.name"
           [destinationLatitude]="trip.destinationLatitude ?? null"
           [destinationLongitude]="trip.destinationLongitude ?? null"
           [places]="trip.places ?? []"

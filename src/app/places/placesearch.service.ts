@@ -7,6 +7,7 @@ import {
   AccommodationSearchResult,
   PlaceDetailsResponse,
   PlaceSearchResult,
+  RecommendationSearchResult,
 } from './place-search.models';
 
 @Injectable({ providedIn: 'root' })
@@ -37,6 +38,15 @@ export class PlaceSearchService {
     const encodedLongitude = encodeURIComponent(longitude.toString());
     return this.http.get<AccommodationSearchResult[]>(
       `/api/placesearch/accommodations/${encodedLatitude}/${encodedLongitude}`,
+    );
+  }
+
+  getRecommendations(latitude: number, longitude: number, destination: string) {
+    const encodedLatitude = encodeURIComponent(latitude.toString());
+    const encodedLongitude = encodeURIComponent(longitude.toString());
+    const encodedDestination = encodeURIComponent(destination);
+    return this.http.get<RecommendationSearchResult[]>(
+      `/api/placesearch/recommendations/${encodedLatitude}/${encodedLongitude}/${encodedDestination}`,
     );
   }
 

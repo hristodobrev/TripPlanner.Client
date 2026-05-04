@@ -42,6 +42,15 @@ export interface AccommodationSearchResult {
   userRatingCount: number | null;
 }
 
+export interface RecommendationSearchResult {
+  externalPlaceId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  rating: number | null;
+  userRatingCount: number | null;
+}
+
 export interface AddPlaceRequest {
   tripId: string;
   externalId: string;

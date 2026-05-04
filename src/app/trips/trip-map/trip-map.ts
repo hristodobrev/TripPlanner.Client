@@ -20,6 +20,8 @@ import { finalize } from 'rxjs';
 import {
   AccommodationSearchResult,
   PlaceDetailsResponse,
+  PlaceSearchResult,
+  RecommendationSearchResult,
 } from '../../places/place-search.models';
 import { PlaceSearchService } from '../../places/placesearch.service';
 import { PlacesService } from '../../places/places.service';
@@ -38,20 +40,32 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private readonly placesService = inject(PlacesService);
 
   @Input({ required: true }) tripId = '';
+  @Input() tripName = '';
   @Input() destinationLatitude: number | null = null;
   @Input() destinationLongitude: number | null = null;
   @Input() places: TripPlace[] = [];
   @Output() readonly placeAdded = new EventEmitter<TripPlace>();
 
   @ViewChild('mapHost') private readonly mapHost?: ElementRef<HTMLDivElement>;
+  @ViewChild('searchInput') private readonly searchInput?: ElementRef<HTMLInputElement>;
 
   protected readonly addingPlaceId = signal<string | null>(null);
+  protected readonly hasAccommodationMarkers = signal(false);
+  protected readonly hasRecommendationMarkers = signal(false);
+  protected readonly hasSearchMarkers = signal(false);
   protected readonly isLoadingAccommodations = signal(false);
+  protected readonly isLoadingRecommendations = signal(false);
+  protected readonly isLoadingSearch = signal(false);
   protected readonly isLoadingMap = signal(true);
+  protected readonly isSearchOpen = signal(false);
   protected readonly mapError = signal('');
   protected readonly panelContentScrollable = signal(false);
+  protected readonly resultSource = signal<'search' | 'recommendations' | null>(null);
+  protected readonly searchQuery = signal('');
+  protected readonly searchResults = signal<PlaceSearchResult[]>([]);
   protected readonly selectedPlace = signal<PlaceDetailsResponse | null>(null);
   protected readonly selectedPlaceCanAdd = signal(false);
+  protected readonly selectedSearchPlaceId = signal<string | null>(null);
   protected readonly selectedPhotoIndex = signal(0);
 
   private panelContentResizeObserver: ResizeObserver | null = null;
@@ -62,8 +76,11 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private map: any | null = null;
   private mapClickListener: any | null = null;
   private markers: any[] = [];
+  private recommendationMarkers: any[] = [];
+  private searchMarkers: any[] = [];
   private selectedPlaceMarker: any | null = null;
   private renderSequence = 0;
+  private searchRequestSequence = 0;
 
   ngAfterViewInit() {
     this.isViewReady = true;
@@ -84,6 +101,8 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.mapClickListener?.remove?.();
     this.clearMarkers();
     this.clearAccommodationMarkers();
+    this.clearRecommendationMarkers();
+    this.clearSearchMarkers();
     this.clearSelectedPlaceMarker();
   }
 
@@ -126,9 +145,146 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       });
   }
 
-  protected closePlacePanel() {
+  protected searchRecommendations() {
+    if (this.hasRecommendationMarkers()) {
+      this.closeRecommendations();
+      return;
+    }
+
+    if (!this.map || this.isLoadingRecommendations() || !this.tripName.trim()) {
+      return;
+    }
+
+    const center = this.map.getCenter?.();
+    const latitude = center?.lat?.();
+    const longitude = center?.lng?.();
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      this.mapError.set('Could not determine the current map center.');
+      return;
+    }
+
+    this.mapError.set('');
+    this.isLoadingRecommendations.set(true);
+
+    this.placeSearchService
+      .getRecommendations(latitude, longitude, this.tripName.trim())
+      .pipe(finalize(() => this.isLoadingRecommendations.set(false)))
+      .subscribe({
+        next: async (places) => {
+          await this.renderRecommendationMarkers(places);
+          this.resultSource.set('recommendations');
+          this.searchResults.set(places as PlaceSearchResult[]);
+          this.showSearchResultsList();
+        },
+        error: () => this.mapError.set('Could not load attractions for this area.'),
+      });
+  }
+
+  protected toggleSearch() {
+    if (this.isSearchOpen()) {
+      this.closeSearch();
+      return;
+    }
+
+    this.isSearchOpen.set(true);
+    this.mapError.set('');
+    requestAnimationFrame(() => this.searchInput?.nativeElement.focus());
+  }
+
+  protected updateSearchQuery(value: string) {
+    this.searchQuery.set(value);
+
+    if (!value.trim()) {
+      this.searchRequestSequence += 1;
+      this.isLoadingSearch.set(false);
+      this.clearSearchMarkers();
+    }
+  }
+
+  protected handleSearchKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeSearch();
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const query = this.searchQuery().trim();
+
+      if (!query) {
+        this.clearSearchMarkers();
+        return;
+      }
+
+      void this.searchPlacesOnMap(query);
+    }
+  }
+
+  protected selectSearchResult(place: PlaceSearchResult) {
+    this.selectedSearchPlaceId.set(place.externalPlaceId);
+    this.loadPlaceDetails(
+      place.externalPlaceId,
+      !this.places.some((tripPlace) => tripPlace.externalPlaceId === place.externalPlaceId),
+      String(this.getSearchResultNumber(place.externalPlaceId)),
+    );
+  }
+
+  protected getSearchResultNumber(externalPlaceId: string) {
+    const markerIndex = this.searchResults().findIndex((place) => place.externalPlaceId === externalPlaceId);
+    return markerIndex >= 0 ? markerIndex + 1 : 0;
+  }
+
+  protected isSelectedSearchResult(externalPlaceId: string) {
+    return this.selectedSearchPlaceId() === externalPlaceId;
+  }
+
+  protected hasSearchResults() {
+    return this.searchResults().length > 0;
+  }
+
+  protected getResultsHeading() {
+    return this.resultSource() === 'recommendations' ? 'Attractions' : 'Search results';
+  }
+
+  protected isShowingSearchResultDetails() {
+    return this.hasSearchResults() && !!this.selectedSearchPlaceId() && !!this.selectedPlace();
+  }
+
+  protected getSearchResultMeta(place: PlaceSearchResult) {
+    const location = [place.locality, place.country].filter(Boolean).join(', ');
+
+    if (place.primaryTypeDisplayName && location) {
+      return `${place.primaryTypeDisplayName} · ${location}`;
+    }
+
+    return place.primaryTypeDisplayName || location;
+  }
+
+  protected showSearchResultsList() {
     this.selectedPlace.set(null);
     this.selectedPlaceCanAdd.set(false);
+    this.selectedSearchPlaceId.set(null);
+    this.selectedPhotoIndex.set(0);
+    this.panelContentScrollable.set(false);
+    this.clearSelectedPlaceMarker();
+  }
+
+  protected closePlacePanel() {
+    if (this.resultSource() === 'search') {
+      this.closeSearch();
+      return;
+    }
+
+    if (this.resultSource() === 'recommendations') {
+      this.closeRecommendations();
+      return;
+    }
+
+    this.selectedPlace.set(null);
+    this.selectedPlaceCanAdd.set(false);
+    this.selectedSearchPlaceId.set(null);
     this.selectedPhotoIndex.set(0);
     this.panelContentScrollable.set(false);
     this.clearSelectedPlaceMarker();
@@ -219,10 +375,7 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       return '';
     }
 
-    return `${new Intl.NumberFormat('en', {
-      notation: reviewCount >= 1000 ? 'compact' : 'standard',
-      maximumFractionDigits: 1,
-    }).format(reviewCount)} reviews`;
+    return `${this.formatReviewCount(reviewCount)} reviews`;
   }
 
   protected getSelectedPlaceWebsiteLabel() {
@@ -259,6 +412,17 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     return this.selectedPlace()?.photoUrls?.length ?? 0;
   }
 
+  protected formatReviewCount(reviewCount: number | null | undefined) {
+    if (!reviewCount) {
+      return '';
+    }
+
+    return new Intl.NumberFormat('en', {
+      notation: reviewCount >= 1000 ? 'compact' : 'standard',
+      maximumFractionDigits: 1,
+    }).format(reviewCount);
+  }
+
   protected showPreviousPhoto() {
     const photoCount = this.selectedPlace()?.photoUrls?.length ?? 0;
 
@@ -277,10 +441,6 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     this.selectedPhotoIndex.update((index) => (index + 1) % photoCount);
-  }
-
-  protected hasAccommodationMarkers() {
-    return this.accommodationMarkers.length > 0;
   }
 
   private async renderMap() {
@@ -392,6 +552,10 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private loadPlaceDetails(placeId: string, canAdd: boolean, glyph: string) {
+    if (!this.searchResults().some((result) => result.externalPlaceId === placeId)) {
+      this.selectedSearchPlaceId.set(null);
+    }
+
     this.selectedPlaceCanAdd.set(canAdd);
     this.selectedPhotoIndex.set(0);
     this.mapError.set('');
@@ -460,6 +624,37 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     });
     this.accommodationMarkers = [];
     this.accommodationHoverInfoWindow?.close();
+    this.hasAccommodationMarkers.set(false);
+  }
+
+  private clearRecommendationMarkers() {
+    this.recommendationMarkers.forEach((marker) => {
+      marker.map = null;
+    });
+    this.recommendationMarkers = [];
+    this.accommodationHoverInfoWindow?.close();
+    this.hasRecommendationMarkers.set(false);
+
+    if (this.resultSource() === 'recommendations') {
+      this.searchResults.set([]);
+      this.selectedSearchPlaceId.set(null);
+      this.resultSource.set(null);
+    }
+  }
+
+  private clearSearchMarkers() {
+    this.searchMarkers.forEach((marker) => {
+      marker.map = null;
+    });
+    this.searchMarkers = [];
+    this.accommodationHoverInfoWindow?.close();
+    this.hasSearchMarkers.set(false);
+    this.selectedSearchPlaceId.set(null);
+
+    if (this.resultSource() === 'search') {
+      this.searchResults.set([]);
+      this.resultSource.set(null);
+    }
   }
 
   private async renderAccommodationMarkers(places: AccommodationSearchResult[]) {
@@ -515,13 +710,193 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
       this.accommodationMarkers.push(marker);
     });
+
+    this.hasAccommodationMarkers.set(this.accommodationMarkers.length > 0);
   }
 
-  private buildAccommodationTooltipText(place: AccommodationSearchResult) {
+  private async renderRecommendationMarkers(places: RecommendationSearchResult[]) {
+    if (!this.map) {
+      return;
+    }
+
+    const googleRef = (window as any).google;
+    const { AdvancedMarkerElement, PinElement } = (await googleRef.maps.importLibrary(
+      'marker',
+    )) as any;
+
+    this.clearRecommendationMarkers();
+
+    places.forEach((place, index) => {
+      const pin = new PinElement({
+        glyph: String(index + 1),
+        glyphColor: '#ffffff',
+        background: '#ce8b1f',
+        borderColor: '#9e670f',
+      });
+
+      const marker = new AdvancedMarkerElement({
+        map: this.map,
+        position: {
+          lat: place.latitude,
+          lng: place.longitude,
+        },
+        title: this.buildAccommodationTooltipText(place),
+        content: pin.element,
+      });
+
+      marker.addListener('mouseover', () => {
+        this.accommodationHoverInfoWindow?.setContent(this.buildAccommodationTooltipHtml(place));
+        this.accommodationHoverInfoWindow?.open({
+          anchor: marker,
+          map: this.map,
+        });
+      });
+
+      marker.addListener('mouseout', () => {
+        this.accommodationHoverInfoWindow?.close();
+      });
+
+      marker.addListener('click', () => {
+        this.accommodationHoverInfoWindow?.close();
+        this.selectSearchResult(place as PlaceSearchResult);
+      });
+
+      this.recommendationMarkers.push(marker);
+    });
+
+    this.hasRecommendationMarkers.set(this.recommendationMarkers.length > 0);
+  }
+
+  private async searchPlacesOnMap(query: string) {
+    if (!this.map) {
+      return;
+    }
+
+    const center = this.map.getCenter?.();
+    const latitude = center?.lat?.();
+    const longitude = center?.lng?.();
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      this.mapError.set('Could not determine the current map center.');
+      return;
+    }
+
+    const currentSearch = ++this.searchRequestSequence;
+    this.mapError.set('');
+    this.isLoadingSearch.set(true);
+
+    this.placeSearchService
+      .searchPlaces(latitude, longitude, query)
+      .pipe(finalize(() => {
+        if (currentSearch === this.searchRequestSequence) {
+          this.isLoadingSearch.set(false);
+        }
+      }))
+      .subscribe({
+        next: async (places) => {
+          if (currentSearch !== this.searchRequestSequence) {
+            return;
+          }
+
+          await this.renderSearchMarkers(places);
+          this.resultSource.set('search');
+          this.searchResults.set(places);
+          this.showSearchResultsList();
+        },
+        error: () => {
+          if (currentSearch !== this.searchRequestSequence) {
+            return;
+          }
+
+          this.mapError.set('Could not search places in this area.');
+        },
+      });
+  }
+
+  private async renderSearchMarkers(places: PlaceSearchResult[]) {
+    if (!this.map) {
+      return;
+    }
+
+    const googleRef = (window as any).google;
+    const { AdvancedMarkerElement, PinElement } = (await googleRef.maps.importLibrary(
+      'marker',
+    )) as any;
+
+    this.clearSearchMarkers();
+
+    places.forEach((place, index) => {
+      const pin = new PinElement({
+        glyph: String(index + 1),
+        glyphColor: '#ffffff',
+        background: '#7d4cc2',
+        borderColor: '#6032a0',
+      });
+
+      const marker = new AdvancedMarkerElement({
+        map: this.map,
+        position: {
+          lat: place.latitude,
+          lng: place.longitude,
+        },
+        title: this.buildAccommodationTooltipText(place),
+        content: pin.element,
+      });
+
+      marker.addListener('mouseover', () => {
+        this.accommodationHoverInfoWindow?.setContent(this.buildAccommodationTooltipHtml(place));
+        this.accommodationHoverInfoWindow?.open({
+          anchor: marker,
+          map: this.map,
+        });
+      });
+
+      marker.addListener('mouseout', () => {
+        this.accommodationHoverInfoWindow?.close();
+      });
+
+      marker.addListener('click', () => {
+        this.accommodationHoverInfoWindow?.close();
+        this.selectSearchResult(place);
+      });
+
+      this.searchMarkers.push(marker);
+    });
+
+    this.hasSearchMarkers.set(this.searchMarkers.length > 0);
+  }
+
+  private closeSearch() {
+    this.isSearchOpen.set(false);
+    this.searchQuery.set('');
+    this.searchRequestSequence += 1;
+    this.isLoadingSearch.set(false);
+    this.selectedPlace.set(null);
+    this.selectedPlaceCanAdd.set(false);
+    this.selectedPhotoIndex.set(0);
+    this.panelContentScrollable.set(false);
+    this.clearSearchMarkers();
+    this.clearSelectedPlaceMarker();
+  }
+
+  private closeRecommendations() {
+    this.selectedPlace.set(null);
+    this.selectedPlaceCanAdd.set(false);
+    this.selectedPhotoIndex.set(0);
+    this.panelContentScrollable.set(false);
+    this.clearRecommendationMarkers();
+    this.clearSelectedPlaceMarker();
+  }
+
+  private buildAccommodationTooltipText(
+    place: AccommodationSearchResult | RecommendationSearchResult | PlaceSearchResult,
+  ) {
     return place.rating ? `${place.name} - ${place.rating}` : place.name;
   }
 
-  private buildAccommodationTooltipHtml(place: AccommodationSearchResult) {
+  private buildAccommodationTooltipHtml(
+    place: AccommodationSearchResult | RecommendationSearchResult | PlaceSearchResult,
+  ) {
     const ratingText = place.rating
       ? `<div style="margin-top:4px;color:#52615d;font-size:12px;line-height:1.4;">Rating ${place.rating}</div>`
       : '';

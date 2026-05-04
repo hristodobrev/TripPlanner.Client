@@ -4,6 +4,50 @@
 
     @if (!isLoadingMap() && places.length > 0) {
       <div class="trip-map-map-actions">
+        <div class="trip-map-search-control" [class.open]="isSearchOpen()">
+          @if (isSearchOpen()) {
+            <div class="trip-map-search-input-wrap">
+              <input
+                #searchInput
+                type="text"
+                class="trip-map-search-input"
+                [value]="searchQuery()"
+                placeholder="Search on map"
+                aria-label="Search places on map"
+                (input)="updateSearchQuery($any($event.target).value)"
+                (keydown)="handleSearchKeydown($event)"
+              />
+              @if (isLoadingSearch()) {
+                <span class="trip-map-search-status">Searching...</span>
+              }
+            </div>
+          }
+
+          <button
+            mat-icon-button
+            type="button"
+            class="trip-map-action-button"
+            [class.active]="isSearchOpen() || hasSearchMarkers()"
+            [attr.aria-pressed]="isSearchOpen() || hasSearchMarkers()"
+            aria-label="Search places"
+            title="Search places"
+            (click)="toggleSearch()"
+          >
+            <mat-icon>search</mat-icon>
+          </button>
+        </div>
+        <button
+          mat-icon-button
+          type="button"
+          class="trip-map-action-button"
+          [class.active]="hasRecommendationMarkers()"
+          [attr.aria-pressed]="hasRecommendationMarkers()"
+          aria-label="Toggle attractions"
+          title="Attractions"
+          (click)="searchRecommendations()"
+        >
+          <mat-icon>attractions</mat-icon>
+        </button>
         <button
           mat-icon-button
           type="button"
@@ -19,14 +63,33 @@
       </div>
     }
 
-    @if (selectedPlace(); as place) {
+    @if (hasSearchResults() || selectedPlace()) {
       <aside class="trip-map-panel" aria-live="polite">
         <div class="trip-map-panel-header">
-          <h3 class="trip-map-panel-title">{{ place.name }}</h3>
+          @if (isShowingSearchResultDetails()) {
+            <div class="trip-map-panel-heading">
+              <button
+                class="trip-map-panel-back"
+                type="button"
+                aria-label="Back to search results"
+                (click)="showSearchResultsList()"
+              >
+                <mat-icon>arrow_back</mat-icon>
+              </button>
+              <h3 class="trip-map-panel-title">{{ selectedPlace()?.name }}</h3>
+            </div>
+          } @else if (hasSearchResults()) {
+            <div class="trip-map-panel-heading">
+              <h3 class="trip-map-panel-title">{{ getResultsHeading() }}</h3>
+            </div>
+          } @else {
+            <h3 class="trip-map-panel-title">{{ selectedPlace()?.name }}</h3>
+          }
+
           <button
             class="trip-map-panel-close"
             type="button"
-            aria-label="Close place details"
+            [attr.aria-label]="hasSearchResults() ? 'Close search results' : 'Close place details'"
             (click)="closePlacePanel()"
           >
             <mat-icon>close</mat-icon>
@@ -35,6 +98,59 @@
 
         <div #panelContent class="trip-map-panel-content" [class.scrollable]="panelContentScrollable()">
           <div class="trip-map-panel-body">
+          @if (hasSearchResults() && !isShowingSearchResultDetails()) {
+            <div class="trip-map-search-results" aria-label="Search results">
+              @for (result of searchResults(); track result.externalPlaceId) {
+                <button
+                  type="button"
+                  class="trip-map-search-result"
+                  [class.active]="isSelectedSearchResult(result.externalPlaceId)"
+                  (click)="selectSearchResult(result)"
+                >
+                  @if (result.photoUrl) {
+                    <img
+                      class="trip-map-search-result-photo"
+                      [src]="result.photoUrl"
+                      [alt]="result.name"
+                      loading="lazy"
+                    />
+                  } @else {
+                    <span class="trip-map-search-result-photo trip-map-search-result-photo-placeholder">
+                      <mat-icon>image</mat-icon>
+                    </span>
+                  }
+                  <span class="trip-map-search-result-content">
+                    <span class="trip-map-search-result-title-row">
+                      <strong>{{ result.name }}</strong>
+                      @if (getSearchResultMeta(result)) {
+                        <span>{{ getSearchResultMeta(result) }}</span>
+                      }
+                    </span>
+                    @if (result.formattedAddress) {
+                      <span class="trip-map-search-result-address">{{ result.formattedAddress }}</span>
+                    }
+                    <span class="trip-map-search-result-info">
+                      @if (result.rating) {
+                        <span class="trip-map-search-result-badge">
+                          <mat-icon>star</mat-icon>
+                          {{ result.rating }}
+                        </span>
+                      }
+                      @if (result.userRatingCount) {
+                        <span class="trip-map-search-result-badge">
+                          <mat-icon>reviews</mat-icon>
+                          {{ formatReviewCount(result.userRatingCount) }}
+                        </span>
+                      }
+                    </span>
+                  </span>
+                  <span class="trip-map-search-result-number">
+                    {{ getSearchResultNumber(result.externalPlaceId) }}
+                  </span>
+                </button>
+              }
+            </div>
+          } @else if (selectedPlace(); as place) {
           @if (place.photoUrls?.length) {
             <div class="trip-map-gallery" aria-label="Place photos">
               <div class="trip-map-gallery-item">
@@ -128,6 +244,7 @@
               <mat-icon>place</mat-icon>
               Stop {{ getSelectedPlaceMarkerNumber() }}
             </p>
+          }
           }
           </div>
         </div>
