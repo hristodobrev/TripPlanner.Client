@@ -1,0 +1,129 @@
+<h2 mat-dialog-title>Share {{ tripName }}</h2>
+
+<mat-dialog-content>
+  <div class="trip-share-form">
+    <section class="trip-share-existing" aria-labelledby="trip-share-existing-title">
+      <div class="trip-share-existing-header">
+        <h3 id="trip-share-existing-title">Shared with</h3>
+      </div>
+
+      @if (isLoadingShares()) {
+        <p class="trip-share-existing-message">Loading shares...</p>
+      } @else if (tripShares().length > 0) {
+        <div class="trip-share-existing-list">
+          @for (share of tripShares(); track share.id) {
+            <div class="trip-share-existing-item">
+              <div class="trip-share-existing-user">
+                <strong>{{ share.userFullName }}</strong>
+              </div>
+              <div class="trip-share-existing-actions">
+                <button
+                  type="button"
+                  class="trip-share-permission-chip"
+                  [class.is-edit]="share.permission === tripPermission.Edit"
+                  [disabled]="updatingShareId() === share.id || deletingShareId() === share.id"
+                  [attr.aria-label]="'Toggle permission for ' + share.userFullName"
+                  [title]="'Change permission for ' + share.userFullName"
+                  (click)="toggleSharePermission(share)"
+                >
+                  {{ getPermissionLabel(share.permission) }}
+                </button>
+                <button
+                  mat-icon-button
+                  class="trip-share-delete-button"
+                  type="button"
+                  [disabled]="deletingShareId() === share.id || updatingShareId() === share.id"
+                  [attr.aria-label]="'Remove access for ' + share.userFullName"
+                  title="Remove access"
+                  (click)="deleteShare(share)"
+                >
+                  <mat-icon>{{ deletingShareId() === share.id ? 'hourglass_top' : 'delete' }}</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="trip-share-existing-message">This trip is not shared yet.</p>
+      }
+    </section>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Search users</mat-label>
+      <input
+        matInput
+        type="text"
+        [value]="shareKeyword()"
+        placeholder="Type a name or email"
+        (input)="updateShareKeyword($any($event.target).value)"
+      />
+      @if (isSearchingUsers()) {
+        <mat-hint>Searching...</mat-hint>
+      } @else {
+        <mat-hint>Enter at least 2 characters.</mat-hint>
+      }
+    </mat-form-field>
+
+    @if (selectedUser(); as user) {
+      <div class="trip-share-selected-user">
+        <div>
+          <strong>{{ user.fullName }}</strong>
+          <p>{{ user.email }}</p>
+        </div>
+        <button
+          mat-stroked-button
+          class="app-secondary-button"
+          type="button"
+          (click)="clearSelectedUser()"
+        >
+          Change
+        </button>
+      </div>
+    } @else if (hasEligibleUserResults()) {
+      <div class="trip-share-results" aria-label="User search results">
+        @for (user of userSearchResults(); track user.id) {
+          <button
+            type="button"
+            class="trip-share-result"
+            (click)="selectUser(user)"
+          >
+            <strong>{{ user.fullName }}</strong>
+            <span>{{ user.email }}</span>
+          </button>
+        }
+      </div>
+    } @else if (shareKeyword().trim().length >= 2 && !isSearchingUsers()) {
+      <p class="trip-share-existing-message">No eligible users found.</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Permission</mat-label>
+      <mat-select
+        [value]="selectedPermission()"
+        (valueChange)="updateSelectedPermission($event)"
+      >
+        <mat-option [value]="tripPermission.ReadOnly">Read only</mat-option>
+        <mat-option [value]="tripPermission.Edit">Edit</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    @if (shareMessage()) {
+      <p class="trip-share-message">{{ shareMessage() }}</p>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button class="app-secondary-button" mat-dialog-close>
+    Close
+  </button>
+  <button
+    mat-flat-button
+    class="app-primary-button"
+    type="button"
+    [disabled]="!selectedUser() || sharingTrip()"
+    (click)="shareTripWithUser()"
+  >
+    {{ sharingTrip() ? 'Sharing...' : 'Share trip' }}
+  </button>
+</mat-dialog-actions>

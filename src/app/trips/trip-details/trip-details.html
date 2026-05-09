@@ -12,19 +12,45 @@
           <div class="trip-hero-header">
             <div>
               <p class="eyebrow">Trip details</p>
-              <h1 id="trip-title">{{ trip.name }}</h1>
+              <div class="trip-title-row">
+                <h1 id="trip-title">{{ trip.name }}</h1>
+                @if (trip.shared) {
+                  <span
+                    class="trip-shared-chip"
+                    [class.is-edit]="trip.sharedPermission === 2"
+                  >
+                    {{ getSharedPermissionLabel(trip.sharedPermission) }}
+                  </span>
+                }
+              </div>
             </div>
-            <button
-              mat-icon-button
-              class="trip-delete-button"
-              type="button"
-              [disabled]="deletingTrip()"
-              aria-label="Delete trip"
-              title="Delete trip"
-              (click)="deleteTrip()"
-            >
-              <mat-icon>{{ deletingTrip() ? 'hourglass_top' : 'delete' }}</mat-icon>
-            </button>
+            <div class="trip-hero-actions">
+              @if (canShareTrip(trip)) {
+                <button
+                  mat-icon-button
+                  class="trip-share-button"
+                  type="button"
+                  aria-label="Share trip"
+                  title="Share trip"
+                  (click)="openShareDialog()"
+                >
+                  <mat-icon>share</mat-icon>
+                </button>
+              }
+              @if (canDeleteTrip(trip)) {
+                <button
+                  mat-icon-button
+                  class="trip-delete-button"
+                  type="button"
+                  [disabled]="deletingTrip()"
+                  aria-label="Delete trip"
+                  title="Delete trip"
+                  (click)="deleteTrip()"
+                >
+                  <mat-icon>{{ deletingTrip() ? 'hourglass_top' : 'delete' }}</mat-icon>
+                </button>
+              }
+            </div>
           </div>
           @if (trip.description) {
             <p>{{ trip.description }}</p>
@@ -48,6 +74,7 @@
 
         <app-trip-places
           [trip]="trip"
+          [isEditable]="canEditTrip(trip)"
           (placesChanged)="updateTripPlaces($event)"
         />
       </div>
@@ -58,6 +85,7 @@
           [tripName]="trip.name"
           [destinationLatitude]="trip.destinationLatitude ?? null"
           [destinationLongitude]="trip.destinationLongitude ?? null"
+          [isEditable]="canEditTrip(trip)"
           [places]="trip.places ?? []"
           (placeAdded)="addTripPlace($event)"
         />

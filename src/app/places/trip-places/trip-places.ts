@@ -39,6 +39,7 @@ export class TripPlacesComponent {
   private readonly placesService = inject(PlacesService);
 
   @Input({ required: true }) trip!: Trip;
+  @Input() isEditable = true;
 
   @Output() readonly placesChanged = new EventEmitter<TripPlace[]>();
 

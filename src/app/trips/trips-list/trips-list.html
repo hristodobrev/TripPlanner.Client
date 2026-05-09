@@ -22,7 +22,17 @@
       @for (trip of trips(); track trackTrip($index, trip)) {
         <article class="trip-card">
           <div>
-            <p class="trip-date">{{ trip.startDate | date: 'mediumDate' }}</p>
+            <div class="trip-card-header">
+              <p class="trip-date">{{ trip.startDate | date: 'mediumDate' }}</p>
+              @if (trip.shared) {
+                <span
+                  class="trip-shared-chip"
+                  [class.is-edit]="trip.sharedPermission === 2"
+                >
+                  {{ getSharedPermissionLabel(trip.sharedPermission) }}
+                </span>
+              }
+            </div>
             <h2>{{ trip.name }}</h2>
             @if (trip.description) {
               <p>{{ trip.description }}</p>
@@ -52,17 +62,19 @@
             >
               Open trip
             </a>
-            <button
-              mat-icon-button
-              class="trip-delete-button"
-              type="button"
-              [disabled]="deletingTripId() === trip.id"
-              aria-label="Delete trip"
-              title="Delete trip"
-              (click)="deleteTrip(trip)"
-            >
-              <mat-icon>{{ deletingTripId() === trip.id ? 'hourglass_top' : 'delete' }}</mat-icon>
-            </button>
+            @if (!trip.shared) {
+              <button
+                mat-icon-button
+                class="trip-delete-button"
+                type="button"
+                [disabled]="deletingTripId() === trip.id"
+                aria-label="Delete trip"
+                title="Delete trip"
+                (click)="deleteTrip(trip)"
+              >
+                <mat-icon>{{ deletingTripId() === trip.id ? 'hourglass_top' : 'delete' }}</mat-icon>
+              </button>
+            }
           </div>
         </article>
       }

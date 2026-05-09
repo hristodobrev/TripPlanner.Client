@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { AddTripRequest, Trip } from './trip.models';
+import { AddTripRequest, ShareTripRequest, Trip, TripShare, UpdateTripShareRequest } from './trip.models';
 
 @Injectable({ providedIn: 'root' })
 export class TripsService {
@@ -21,5 +21,26 @@ export class TripsService {
 
   deleteTrip(tripId: string) {
     return this.http.delete(`/api/trips/${encodeURIComponent(tripId)}`);
+  }
+
+  shareTrip(tripId: string, request: ShareTripRequest) {
+    return this.http.post(`/api/trips/${encodeURIComponent(tripId)}/shares`, request);
+  }
+
+  getTripShares(tripId: string) {
+    return this.http.get<TripShare[]>(`/api/trips/${encodeURIComponent(tripId)}/shares`);
+  }
+
+  updateTripShare(tripId: string, tripShareId: string, request: UpdateTripShareRequest) {
+    return this.http.put(
+      `/api/trips/${encodeURIComponent(tripId)}/shares/${encodeURIComponent(tripShareId)}`,
+      request,
+    );
+  }
+
+  deleteTripShare(tripId: string, tripShareId: string) {
+    return this.http.delete(
+      `/api/trips/${encodeURIComponent(tripId)}/shares/${encodeURIComponent(tripShareId)}`,
+    );
   }
 }

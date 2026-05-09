@@ -21,40 +21,46 @@
               <li
                 cdkDrag
                 [cdkDragData]="place"
-                [cdkDragDisabled]="isReorderingPlaces() || editingNotePlaceId() === place.id"
+                [cdkDragDisabled]="!isEditable || isReorderingPlaces() || editingNotePlaceId() === place.id"
                 [class.dragging]="draggedPlaceId() === place.id"
                 (cdkDragStarted)="startPlaceDrag(place)"
                 (cdkDragEnded)="endPlaceDrag()"
               >
                 <div class="place-content">
                   <div class="place-main-row">
-                    <button
-                      mat-icon-button
-                      type="button"
-                      class="drag-handle"
-                      cdkDragHandle
-                      aria-label="Drag place"
-                      title="Drag place"
-                    >
-                      <mat-icon>drag_indicator</mat-icon>
-                    </button>
+                    @if (isEditable) {
+                      <button
+                        mat-icon-button
+                        type="button"
+                        class="drag-handle"
+                        cdkDragHandle
+                        aria-label="Drag place"
+                        title="Drag place"
+                      >
+                        <mat-icon>drag_indicator</mat-icon>
+                      </button>
+                    }
                     <strong>{{ place.name }}</strong>
                   </div>
                   <div class="place-status-indicator" [class]="getPlaceStatusClass(place.status ?? 1)">
-                    <button
-                      mat-icon-button
-                      type="button"
-                      class="status-button"
-                      [class.status-planned]="(place.status ?? 1) === 1"
-                      [class.status-visited]="place.status === 2"
-                      [class.status-skipped]="place.status === 3"
-                      [disabled]="savingStatusPlaceId() === place.id || isReorderingPlaces()"
-                      [attr.aria-label]="'Change status for ' + place.name"
-                      [title]="'Status: ' + getPlaceStatusLabel(place.status ?? 1)"
-                      (click)="cyclePlaceStatus(place)"
-                    >
-                      <mat-icon>{{ getPlaceStatusIcon(place.status ?? 1) }}</mat-icon>
-                    </button>
+                    @if (isEditable) {
+                      <button
+                        mat-icon-button
+                        type="button"
+                        class="status-button"
+                        [class.status-planned]="(place.status ?? 1) === 1"
+                        [class.status-visited]="place.status === 2"
+                        [class.status-skipped]="place.status === 3"
+                        [disabled]="savingStatusPlaceId() === place.id || isReorderingPlaces()"
+                        [attr.aria-label]="'Change status for ' + place.name"
+                        [title]="'Status: ' + getPlaceStatusLabel(place.status ?? 1)"
+                        (click)="cyclePlaceStatus(place)"
+                      >
+                        <mat-icon>{{ getPlaceStatusIcon(place.status ?? 1) }}</mat-icon>
+                      </button>
+                    } @else {
+                      <mat-icon class="status-button readonly-status-icon">{{ getPlaceStatusIcon(place.status ?? 1) }}</mat-icon>
+                    }
                     <span class="place-status-label">{{ getPlaceStatusLabel(place.status ?? 1) }}</span>
                   </div>
                   @if (hasPlaceDetails(place)) {
@@ -72,31 +78,33 @@
                   }
                 </div>
 
-                <div class="place-actions">
-                  <button
-                    mat-icon-button
-                    class="note-button"
-                    type="button"
-                    (click)="startNoteEdit(place)"
-                    [attr.aria-label]="place.note ? 'Edit note for ' + place.name : 'Add note for ' + place.name"
-                    [title]="place.note ? 'Edit note' : 'Add note'"
-                  >
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button
-                    mat-icon-button
-                    class="icon-button danger-button"
-                    type="button"
-                    [disabled]="deletingPlaceId() === place.id || isReorderingPlaces()"
-                    (click)="removePlace(place)"
-                    [attr.aria-label]="'Remove ' + place.name"
-                    title="Remove place"
-                  >
-                    <mat-icon>{{ deletingPlaceId() === place.id ? 'hourglass_top' : 'delete' }}</mat-icon>
-                  </button>
-                </div>
+                @if (isEditable) {
+                  <div class="place-actions">
+                    <button
+                      mat-icon-button
+                      class="note-button"
+                      type="button"
+                      (click)="startNoteEdit(place)"
+                      [attr.aria-label]="place.note ? 'Edit note for ' + place.name : 'Add note for ' + place.name"
+                      [title]="place.note ? 'Edit note' : 'Add note'"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button
+                      mat-icon-button
+                      class="icon-button danger-button"
+                      type="button"
+                      [disabled]="deletingPlaceId() === place.id || isReorderingPlaces()"
+                      (click)="removePlace(place)"
+                      [attr.aria-label]="'Remove ' + place.name"
+                      title="Remove place"
+                    >
+                      <mat-icon>{{ deletingPlaceId() === place.id ? 'hourglass_top' : 'delete' }}</mat-icon>
+                    </button>
+                  </div>
+                }
 
-                @if (editingNotePlaceId() === place.id) {
+                @if (isEditable && editingNotePlaceId() === place.id) {
                   <form class="note-editor" (submit)="$event.preventDefault(); savePlaceDetails(place)">
                     <label>
                       Note
@@ -189,11 +197,13 @@
   }
 </section>
 
-<app-place-search
-  [tripId]="trip.id"
-  [destinationLatitude]="trip.destinationLatitude ?? null"
-  [destinationLongitude]="trip.destinationLongitude ?? null"
-  [existingPlaceNames]="getExistingPlaceNames()"
-  [nextOrder]="getNextUnscheduledOrder()"
-  (placeAdded)="addPlaceLocally($event)"
-/>
+@if (isEditable) {
+  <app-place-search
+    [tripId]="trip.id"
+    [destinationLatitude]="trip.destinationLatitude ?? null"
+    [destinationLongitude]="trip.destinationLongitude ?? null"
+    [existingPlaceNames]="getExistingPlaceNames()"
+    [nextOrder]="getNextUnscheduledOrder()"
+    (placeAdded)="addPlaceLocally($event)"
+  />
+}

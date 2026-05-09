@@ -2,7 +2,7 @@
   <div class="trip-map-shell">
     <div #mapHost class="trip-map-canvas" aria-label="Map of trip places"></div>
 
-    @if (!isLoadingMap() && places.length > 0) {
+    @if (isEditable && !isLoadingMap() && places.length > 0) {
       <div class="trip-map-map-actions">
         <div class="trip-map-search-control" [class.open]="isSearchOpen()">
           @if (isSearchOpen()) {
@@ -229,7 +229,7 @@
             <p class="trip-map-note">{{ place.note }}</p>
           }
 
-          @if (selectedPlaceCanAdd()) {
+          @if (isEditable && selectedPlaceCanAdd()) {
             <button
               mat-flat-button
               class="app-primary-button trip-map-panel-action"

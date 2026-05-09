@@ -59,6 +59,14 @@ dd {
   box-shadow: 0 18px 60px rgba(24, 33, 31, 0.1);
 }
 
+.trip-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .trip-actions {
   display: flex;
   flex-wrap: wrap;
@@ -93,6 +101,24 @@ dd {
 .trip-date {
   color: #1e7257;
   font-weight: 900;
+}
+
+.trip-shared-chip {
+  width: fit-content;
+  padding: 4px 10px;
+  color: #2a6fd6;
+  background: #eaf2ff;
+  border: 1px solid #c8dbff;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.trip-shared-chip.is-edit {
+  color: #1e7257;
+  background: #e8f4ee;
+  border-color: #c7dfd1;
 }
 
 dl {

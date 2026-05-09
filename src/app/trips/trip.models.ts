@@ -13,6 +13,11 @@ export enum PlaceStatus {
   Skipped = 3,
 }
 
+export enum TripPermission {
+  ReadOnly = 1,
+  Edit = 2,
+}
+
 export interface TripPlace {
   id: string;
   externalPlaceId?: string | null;
@@ -44,6 +49,24 @@ export interface Trip {
   destinationExternalId: string;
   destinationLatitude?: number | null;
   destinationLongitude?: number | null;
+  shared?: boolean;
+  sharedPermission?: TripPermission | null;
   places?: TripPlace[];
   createdAtUtc: string;
+}
+
+export interface ShareTripRequest {
+  userId: string;
+  permission: TripPermission;
+}
+
+export interface UpdateTripShareRequest {
+  permission: TripPermission;
+}
+
+export interface TripShare {
+  id: string;
+  userId: string;
+  userFullName: string;
+  permission: TripPermission;
 }

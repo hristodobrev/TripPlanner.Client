@@ -8,8 +8,9 @@ import { finalize, switchMap } from 'rxjs';
 
 import { TripPlacesComponent } from '../../places/trip-places/trip-places';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog';
+import { ShareTripDialogComponent } from '../share-trip-dialog/share-trip-dialog';
 import { TripMapComponent } from '../trip-map/trip-map';
-import { Trip, TripPlace } from '../trip.models';
+import { Trip, TripPermission, TripPlace } from '../trip.models';
 import { TripsService } from '../trips.service';
 
 @Component({
@@ -89,5 +90,36 @@ export class TripDetailsComponent {
     this.trip.update((trip) =>
       trip ? { ...trip, places: [...(trip.places ?? []), place] } : trip,
     );
+  }
+
+  protected canEditTrip(trip: Trip) {
+    return !trip.shared || trip.sharedPermission === TripPermission.Edit;
+  }
+
+  protected canShareTrip(trip: Trip) {
+    return !trip.shared;
+  }
+
+  protected canDeleteTrip(trip: Trip) {
+    return !trip.shared;
+  }
+
+  protected getSharedPermissionLabel(permission: TripPermission | null | undefined) {
+    return permission === TripPermission.Edit ? 'Shared · Edit' : 'Shared · Read only';
+  }
+
+  protected openShareDialog() {
+    const trip = this.trip();
+
+    if (!trip) {
+      return;
+    }
+
+    this.dialog.open(ShareTripDialogComponent, {
+      data: {
+        tripId: trip.id,
+        tripName: trip.name,
+      },
+    });
   }
 }

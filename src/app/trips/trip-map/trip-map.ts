@@ -43,6 +43,7 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() tripName = '';
   @Input() destinationLatitude: number | null = null;
   @Input() destinationLongitude: number | null = null;
+  @Input() isEditable = true;
   @Input() places: TripPlace[] = [];
   @Output() readonly placeAdded = new EventEmitter<TripPlace>();
 

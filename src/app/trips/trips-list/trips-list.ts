@@ -7,7 +7,7 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog';
-import { Trip } from '../trip.models';
+import { Trip, TripPermission } from '../trip.models';
 import { TripsService } from '../trips.service';
 
 @Component({
@@ -44,6 +44,10 @@ export class TripsListComponent {
 
   protected trackTrip(_: number, trip: Trip) {
     return trip.id;
+  }
+
+  protected getSharedPermissionLabel(permission: TripPermission | null | undefined) {
+    return permission === TripPermission.Edit ? 'Shared · Edit' : 'Shared · Read only';
   }
 
   protected deleteTrip(trip: Trip) {
