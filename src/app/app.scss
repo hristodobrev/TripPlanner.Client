@@ -5,8 +5,7 @@
   color: #18211f;
   background:
     linear-gradient(125deg, rgba(30, 114, 87, 0.15), transparent 36%),
-    linear-gradient(310deg, rgba(206, 43, 55, 0.12), transparent 35%),
-    #f7f8f4;
+    linear-gradient(310deg, rgba(206, 43, 55, 0.12), transparent 35%), #f7f8f4;
 }
 
 .topbar {
@@ -63,5 +62,16 @@
 
   .nav-list {
     width: 100%;
+  }
+}
+
+@media print {
+  :host {
+    min-height: 0;
+    background: #ffffff;
+  }
+
+  .topbar {
+    display: none;
   }
 }

@@ -1,0 +1,139 @@
+<main class="print-page">
+  @if (isLoadingTrip()) {
+    <p class="status">Loading trip guide...</p>
+  } @else if (tripError()) {
+    <section class="status-panel">
+      <p>{{ tripError() }}</p>
+    </section>
+  } @else if (trip(); as trip) {
+    <div class="page-shell">
+      <nav class="screen-actions" aria-label="Trip guide actions">
+        <a mat-stroked-button class="app-secondary-button" [routerLink]="['/trips', trip.id]">
+          <mat-icon>arrow_back</mat-icon>
+          Trip details
+        </a>
+        <button mat-flat-button class="app-primary-button" type="button" (click)="printPage()">
+          <mat-icon>print</mat-icon>
+          Print
+        </button>
+      </nav>
+
+      <header class="guide-header">
+        <div>
+          <p class="eyebrow">Trip guide</p>
+          <h1>{{ trip.name }}</h1>
+        </div>
+        <dl class="trip-summary">
+          <div>
+            <dt>Start</dt>
+            <dd>{{ trip.startDate | date: 'mediumDate' }}</dd>
+          </div>
+          <div>
+            <dt>End</dt>
+            <dd>{{ trip.endDate | date: 'mediumDate' }}</dd>
+          </div>
+          <div>
+            <dt>Days</dt>
+            <dd>{{ trip.durationInDays }}</dd>
+          </div>
+        </dl>
+        @if (trip.description) {
+          <p class="trip-description">{{ trip.description }}</p>
+        }
+      </header>
+
+      <section class="itinerary" aria-label="Daily itinerary">
+        @for (day of getItineraryDays(trip); track day.dayNumber) {
+          <article class="day-block">
+            <header class="day-header">
+              <h2>Day {{ day.dayNumber + 1 }}</h2>
+              @if (day.date) {
+                <span>{{ day.date | date: 'EEEE, MMM d' }}</span>
+              }
+            </header>
+
+            @if (day.places.length > 0) {
+              <ol class="place-list">
+                @for (place of day.places; track place.id) {
+                  <li>
+                    <div class="place-heading">
+                      <div class="place-summary">
+                        <h3>{{ place.name }}</h3>
+                        @if (getPlaceMeta(place).length > 0) {
+                          <div class="place-meta">
+                            @for (item of getPlaceMeta(place); track item) {
+                              <span>{{ item }}</span>
+                            }
+                          </div>
+                        }
+                      </div>
+                      <div class="place-actions">
+                        <button
+                          mat-icon-button
+                          type="button"
+                          class="status-toggle"
+                          [class.status-planned]="
+                            getPlaceStatusClass(place.status ?? 1) === 'status-planned'
+                          "
+                          [class.status-visited]="
+                            getPlaceStatusClass(place.status ?? 1) === 'status-visited'
+                          "
+                          [class.status-skipped]="
+                            getPlaceStatusClass(place.status ?? 1) === 'status-skipped'
+                          "
+                          [disabled]="savingStatusPlaceId() === place.id"
+                          [attr.aria-label]="'Change status for ' + place.name"
+                          [title]="'Status: ' + getPlaceStatusLabel(place.status ?? 1)"
+                          (click)="cyclePlaceStatus(place)"
+                        >
+                          <mat-icon>{{ getPlaceStatusIcon(place.status ?? 1) }}</mat-icon>
+                        </button>
+                        <a
+                          mat-icon-button
+                          class="directions-link"
+                          [href]="getDirectionsUrl(place)"
+                          target="_blank"
+                          rel="noopener"
+                          [attr.aria-label]="'Open directions to ' + place.name"
+                          title="Open directions"
+                        >
+                          <mat-icon>directions</mat-icon>
+                        </a>
+                      </div>
+                    </div>
+
+                    @if (place.formattedAddress) {
+                      <p class="place-address">{{ place.formattedAddress }}</p>
+                    }
+
+                    @if (place.note) {
+                      <p class="place-note">{{ place.note }}</p>
+                    }
+                  </li>
+                }
+              </ol>
+            } @else {
+              <p class="empty-day">No places scheduled.</p>
+            }
+          </article>
+        }
+      </section>
+
+      @if (getUnscheduledPlaces(trip).length > 0) {
+        <section class="unscheduled" aria-labelledby="unscheduled-title">
+          <h2 id="unscheduled-title">Unscheduled places</h2>
+          <ul class="unscheduled-list">
+            @for (place of getUnscheduledPlaces(trip); track place.id) {
+              <li>
+                <strong>{{ place.name }}</strong>
+                @if (place.formattedAddress) {
+                  <span>{{ place.formattedAddress }}</span>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    </div>
+  }
+</main>

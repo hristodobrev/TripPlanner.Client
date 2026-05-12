@@ -91,10 +91,21 @@
   background: #eef5f1;
 }
 
+.trip-print-button {
+  color: #2a6fd6;
+  background: #eaf2ff;
+}
+
 .trip-share-button:hover,
 .trip-share-button:focus-visible {
   color: #ffffff;
   background: #1e7257;
+}
+
+.trip-print-button:hover,
+.trip-print-button:focus-visible {
+  color: #ffffff;
+  background: #2a6fd6;
 }
 
 .trip-shared-chip {

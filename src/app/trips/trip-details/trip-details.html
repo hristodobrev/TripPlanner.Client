@@ -15,16 +15,22 @@
               <div class="trip-title-row">
                 <h1 id="trip-title">{{ trip.name }}</h1>
                 @if (trip.shared) {
-                  <span
-                    class="trip-shared-chip"
-                    [class.is-edit]="trip.sharedPermission === 2"
-                  >
+                  <span class="trip-shared-chip" [class.is-edit]="trip.sharedPermission === 2">
                     {{ getSharedPermissionLabel(trip.sharedPermission) }}
                   </span>
                 }
               </div>
             </div>
             <div class="trip-hero-actions">
+              <a
+                mat-icon-button
+                class="trip-print-button"
+                [routerLink]="['/trips', trip.id, 'print']"
+                aria-label="Open trip guide"
+                title="Open trip guide"
+              >
+                <mat-icon>print</mat-icon>
+              </a>
               @if (canShareTrip(trip)) {
                 <button
                   mat-icon-button
