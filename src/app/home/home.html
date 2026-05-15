@@ -2,127 +2,155 @@
   <section class="intro" aria-labelledby="page-title">
     <div class="intro__copy">
       <p class="eyebrow">TripPlanner</p>
-      <h1 id="page-title">Build a trip that keeps the whole route in view.</h1>
+      <h1 id="page-title">Plan your next route</h1>
       <p>
         Pick the dates, mark the stops, and keep the next decision clear while your itinerary
         takes shape.
       </p>
     </div>
 
-    <form class="trip-form" [formGroup]="tripForm" (ngSubmit)="submitTrip()" aria-label="Add trip">
-      <div class="destination-field">
-        <label for="destination">Destination</label>
-        <mat-form-field appearance="outline">
-          <input
-            id="destination"
-            matInput
-            type="text"
-            formControlName="destination"
-            placeholder="Where are you going?"
-            autocomplete="off"
-          />
-          @if (tripForm.controls.destination.touched && !selectedPlace()) {
-            <mat-error>Choose a destination from the list.</mat-error>
-          }
-        </mat-form-field>
+    <div class="stats" aria-label="Planning highlights">
+      <article>
+        <span>{{ isLoadingDashboard() ? '-' : dashboard().tripsCount }}</span>
+        trips
+      </article>
+      <article>
+        <span>{{ isLoadingDashboard() ? '-' : dashboard().visitedPlacesCount }}</span>
+        visited
+      </article>
+      <article>
+        <span>{{ isLoadingDashboard() ? '-' : dashboard().plannedPlacesCount }}</span>
+        planned
+      </article>
+    </div>
+  </section>
 
-        @if (isSearchingPlaces()) {
-          <p class="places-status">Searching places...</p>
-        }
+  <section class="planner" aria-labelledby="planner-title">
+    <div class="planner__form">
+      <h2 id="planner-title">New trip</h2>
 
-        @if (placeOptions().length > 0) {
-          <ul class="places-list" aria-label="Destination suggestions">
-            @for (place of placeOptions(); track trackPlace($index, place)) {
-              <li>
-                <button type="button" (click)="selectPlace(place)">
-                  <strong>{{ place.mainText }}</strong>
-                  @if (place.secondaryText) {
-                    <span>{{ place.secondaryText }}</span>
-                  }
-                </button>
-              </li>
+      <form class="trip-form" [formGroup]="tripForm" (ngSubmit)="submitTrip()" aria-label="Add trip">
+        <div class="trip-form__top-row">
+          <div class="destination-field">
+            <label for="destination">Destination</label>
+            <mat-form-field appearance="outline">
+              <input
+                id="destination"
+                matInput
+                type="text"
+                formControlName="destination"
+                placeholder="Where are you going?"
+                autocomplete="off"
+              />
+              @if (tripForm.controls.destination.touched && !selectedPlace()) {
+                <mat-error>Choose a destination from the list.</mat-error>
+              }
+            </mat-form-field>
+
+            @if (isSearchingPlaces()) {
+              <p class="places-status">Searching places...</p>
             }
-          </ul>
+
+            @if (placeOptions().length > 0) {
+              <ul class="places-list" aria-label="Destination suggestions">
+                @for (place of placeOptions(); track trackPlace($index, place)) {
+                  <li>
+                    <button type="button" (click)="selectPlace(place)">
+                      <strong>{{ place.mainText }}</strong>
+                      @if (place.secondaryText) {
+                        <span>{{ place.secondaryText }}</span>
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <div class="trip-form__date-range">
+            <label for="trip-date-range">Trip dates</label>
+            <mat-form-field appearance="outline" class="date-range-field">
+              <mat-date-range-input [rangePicker]="tripDateRangePicker">
+                <input
+                  id="trip-date-range"
+                  matStartDate
+                  formControlName="startDate"
+                  placeholder="Start date"
+                />
+                <input matEndDate formControlName="endDate" placeholder="End date" />
+              </mat-date-range-input>
+              <mat-datepicker-toggle matIconSuffix [for]="tripDateRangePicker"></mat-datepicker-toggle>
+              <mat-date-range-picker #tripDateRangePicker></mat-date-range-picker>
+              @if (
+                (tripForm.controls.startDate.touched && tripForm.controls.startDate.invalid) ||
+                (tripForm.controls.endDate.touched && tripForm.controls.endDate.invalid)
+              ) {
+                <mat-error>Choose a start and end date.</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          <button
+            mat-flat-button
+            class="app-primary-button"
+            type="submit"
+            [disabled]="isSubmittingTrip()"
+          >
+            {{ isSubmittingTrip() ? 'Adding trip...' : 'Add trip' }}
+          </button>
+        </div>
+
+        @if (formMessage()) {
+          <p class="form-message">{{ formMessage() }}</p>
         }
-
-      </div>
-
-      <div class="trip-form__date-range">
-        <label for="trip-date-range">Trip dates</label>
-        <mat-form-field appearance="outline" class="date-range-field">
-          <mat-date-range-input [rangePicker]="tripDateRangePicker">
-            <input
-              id="trip-date-range"
-              matStartDate
-              formControlName="startDate"
-              placeholder="Start date"
-            />
-            <input matEndDate formControlName="endDate" placeholder="End date" />
-          </mat-date-range-input>
-          <mat-datepicker-toggle matIconSuffix [for]="tripDateRangePicker"></mat-datepicker-toggle>
-          <mat-date-range-picker #tripDateRangePicker></mat-date-range-picker>
-          @if (
-            (tripForm.controls.startDate.touched && tripForm.controls.startDate.invalid) ||
-            (tripForm.controls.endDate.touched && tripForm.controls.endDate.invalid)
-          ) {
-            <mat-error>Choose a start and end date.</mat-error>
-          }
-        </mat-form-field>
-      </div>
-
-      <label>
-        Description
-        <mat-form-field appearance="outline">
-          <textarea
-            matInput
-            formControlName="description"
-            placeholder="Add notes, plans, or reminders."
-            rows="4"
-          ></textarea>
-        </mat-form-field>
-      </label>
-
-      <button mat-flat-button class="app-primary-button" type="submit" [disabled]="isSubmittingTrip()">
-        {{ isSubmittingTrip() ? 'Adding trip...' : 'Add trip' }}
-      </button>
-
-      @if (formMessage()) {
-        <p class="form-message">{{ formMessage() }}</p>
-      }
-    </form>
-  </section>
-
-  <section class="stats" aria-label="Planning highlights">
-    <article>
-      <span>4</span>
-      planning modes
-    </article>
-    <article>
-      <span>18</span>
-      saved ideas
-    </article>
-    <article>
-      <span>7d</span>
-      sample route
-    </article>
-  </section>
-
-  <section class="ideas" aria-labelledby="ideas-title">
-    <div>
-      <p class="eyebrow">Ideas</p>
-      <h2 id="ideas-title">Trips ready for the first draft</h2>
+      </form>
     </div>
 
-    <div class="idea-grid">
-      @for (idea of tripIdeas; track idea.city) {
+    <aside class="ideas" aria-labelledby="ideas-title">
+      <div class="ideas__header">
+        <h2 id="ideas-title">Recommended places</h2>
+      </div>
+
+      @if (isLoadingRecommendations()) {
+        <p class="ideas-status">Loading ideas...</p>
+      } @else if (recommendations().length === 0) {
+        <p class="ideas-status">No trip ideas are available right now.</p>
+      }
+
+      @for (idea of recommendations(); track trackRecommendation($index, idea)) {
         <article class="idea-card">
-          <img [src]="idea.image" [alt]="idea.city + ' travel view'" />
-          <div>
-            <h3>{{ idea.city }}</h3>
-            <p>{{ idea.detail }}</p>
+          <figure class="idea-media">
+            <img [src]="idea.imageUrl" [alt]="idea.name + ', ' + idea.country + ' travel view'" />
+            <figcaption class="idea-credit">
+              {{ idea.imageSource }}
+              @if (idea.imageAuthor && idea.imageAuthorUrl) {
+                by
+                <a [href]="idea.imageAuthorUrl" target="_blank" rel="noreferrer">
+                  {{ idea.imageAuthor }}
+                </a>
+              }
+            </figcaption>
+          </figure>
+          <div class="idea-card__body">
+            <div class="idea-card__header">
+              <div>
+                <h3>{{ idea.name }}</h3>
+                <p class="idea-country">{{ idea.country }}</p>
+              </div>
+              <button
+                mat-icon-button
+                type="button"
+                [attr.aria-label]="'Use ' + idea.name + ' as trip destination'"
+                [title]="'Use ' + idea.name"
+                (click)="useRecommendation(idea)"
+              >
+                <mat-icon>add_location_alt</mat-icon>
+              </button>
+            </div>
+            <p>{{ idea.description }}</p>
           </div>
         </article>
       }
-    </div>
+    </aside>
   </section>
 </main>

@@ -2,7 +2,8 @@ export interface AddTripRequest {
   name: string;
   description: string;
   placeId: string;
-  placeName: string;
+  destinationName: string;
+  destinationCountry: string;
   startDate: string;
   endDate: string;
 }
@@ -53,6 +54,17 @@ export interface Trip {
   sharedPermission?: TripPermission | null;
   places?: TripPlace[];
   createdAtUtc: string;
+}
+
+export interface TripRecommendation {
+  country: string;
+  description: string;
+  placeId: string;
+  imageAuthor: string;
+  imageAuthorUrl: string;
+  imageSource: string;
+  imageUrl: string;
+  name: string;
 }
 
 export interface ShareTripRequest {

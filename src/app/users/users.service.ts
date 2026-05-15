@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { UserSearchResult } from './user.models';
+import { UserDashboard, UserSearchResult } from './user.models';
 
 @Injectable({ providedIn: 'root' })
 export class UsersService {
@@ -10,5 +10,8 @@ export class UsersService {
   searchUsers(keyword: string) {
     return this.http.get<UserSearchResult[]>(`/api/Users/search/${encodeURIComponent(keyword)}`);
   }
-}
 
+  getDashboard() {
+    return this.http.get<UserDashboard>('/api/Users/dashboard');
+  }
+}

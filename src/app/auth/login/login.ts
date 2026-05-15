@@ -3,7 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthService } from '../auth.service';
@@ -15,6 +15,7 @@ import { AuthService } from '../auth.service';
   styleUrl: '../auth.scss',
 })
 export class LoginComponent {
+  private readonly activatedRoute = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly router = inject(Router);
@@ -40,8 +41,14 @@ export class LoginComponent {
       .login(this.form.getRawValue())
       .pipe(finalize(() => this.isSubmitting.set(false)))
       .subscribe({
-        next: () => void this.router.navigateByUrl('/'),
+        next: () => void this.router.navigateByUrl(this.getReturnUrl()),
         error: () => this.message.set('Login failed. Check your credentials and try again.'),
       });
+  }
+
+  private getReturnUrl() {
+    const returnUrl = this.activatedRoute.snapshot.queryParamMap.get('returnUrl');
+
+    return returnUrl?.startsWith('/') ? returnUrl : '/';
   }
 }

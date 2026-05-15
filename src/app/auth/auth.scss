@@ -74,7 +74,9 @@ span {
   font-size: 0.8rem;
 }
 
-.app-primary-button {
+button.app-primary-button {
+  width: 100%;
+  height: 56px;
   margin-top: 6px;
 }
 

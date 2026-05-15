@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
 import { Router } from '@angular/router';
@@ -11,8 +12,10 @@ import { catchError, debounceTime, distinctUntilChanged, finalize, of, switchMap
 
 import { PlaceAutocompleteOption } from '../places/place-autocomplete.models';
 import { PlaceSearchService } from '../places/placesearch.service';
-import { AddTripRequest } from '../trips/trip.models';
+import { AddTripRequest, TripRecommendation } from '../trips/trip.models';
 import { TripsService } from '../trips/trips.service';
+import { UserDashboard } from '../users/user.models';
+import { UsersService } from '../users/users.service';
 
 @Component({
   selector: 'app-home',
@@ -21,6 +24,7 @@ import { TripsService } from '../trips/trips.service';
     MatButtonModule,
     MatDatepickerModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule,
     MatNativeDateModule,
   ],
@@ -33,10 +37,19 @@ export class HomeComponent {
   private readonly placeSearchService = inject(PlaceSearchService);
   private readonly router = inject(Router);
   private readonly tripsService = inject(TripsService);
+  private readonly usersService = inject(UsersService);
 
   protected readonly isSearchingPlaces = signal(false);
   protected readonly isSubmittingTrip = signal(false);
+  protected readonly isLoadingRecommendations = signal(false);
+  protected readonly isLoadingDashboard = signal(false);
   protected readonly formMessage = signal('');
+  protected readonly dashboard = signal<UserDashboard>({
+    tripsCount: 0,
+    visitedPlacesCount: 0,
+    plannedPlacesCount: 0,
+  });
+  protected readonly recommendations = signal<TripRecommendation[]>([]);
   protected readonly placeOptions = signal<PlaceAutocompleteOption[]>([]);
   protected readonly selectedPlace = signal<PlaceAutocompleteOption | null>(null);
 
@@ -47,28 +60,10 @@ export class HomeComponent {
     description: [''],
   });
 
-  protected readonly tripIdeas = [
-    {
-      city: 'Lisbon',
-      detail: 'Food walks, viewpoints, and a quick train to Sintra.',
-      image:
-        'https://images.unsplash.com/photo-1585208798174-6cedd86e019a?auto=format&fit=crop&w=900&q=80',
-    },
-    {
-      city: 'Tokyo',
-      detail: 'Neighborhood days, late-night ramen, and flexible transit plans.',
-      image:
-        'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=900&q=80',
-    },
-    {
-      city: 'Reykjavik',
-      detail: 'Hot springs, waterfalls, and weather-aware road trip routes.',
-      image:
-        'https://images.unsplash.com/photo-1504829857797-ddff29c27927?auto=format&fit=crop&w=900&q=80',
-    },
-  ];
-
   constructor() {
+    this.loadDashboard();
+    this.loadRecommendations();
+
     this.tripForm.controls.destination.valueChanges
       .pipe(
         debounceTime(250),
@@ -142,8 +137,57 @@ export class HomeComponent {
     return place.placeId;
   }
 
+  protected trackRecommendation(_: number, recommendation: TripRecommendation) {
+    return recommendation.placeId;
+  }
+
+  protected useRecommendation(recommendation: TripRecommendation) {
+    const place = {
+      placeId: recommendation.placeId,
+      mainText: recommendation.name,
+      secondaryText: recommendation.country,
+    };
+
+    this.selectedPlace.set(place);
+    this.placeOptions.set([]);
+    this.formMessage.set('');
+    this.tripForm.patchValue(
+      {
+        destination: this.formatPlace(place),
+        startDate: null,
+        endDate: null,
+        description: recommendation.description,
+      },
+      { emitEvent: false },
+    );
+  }
+
   private formatPlace(place: PlaceAutocompleteOption) {
     return place.secondaryText ? `${place.mainText}, ${place.secondaryText}` : place.mainText;
+  }
+
+  private loadRecommendations() {
+    this.isLoadingRecommendations.set(true);
+    this.tripsService
+      .getTripRecommendations()
+      .pipe(
+        catchError(() => of([])),
+        finalize(() => this.isLoadingRecommendations.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((recommendations) => this.recommendations.set(recommendations));
+  }
+
+  private loadDashboard() {
+    this.isLoadingDashboard.set(true);
+    this.usersService
+      .getDashboard()
+      .pipe(
+        catchError(() => of(this.dashboard())),
+        finalize(() => this.isLoadingDashboard.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((dashboard) => this.dashboard.set(dashboard));
   }
 
   private createAddTripRequest(place: PlaceAutocompleteOption | null): AddTripRequest | null {
@@ -163,10 +207,20 @@ export class HomeComponent {
       name: this.formatPlace(place),
       description: (formValue.description ?? '').trim(),
       placeId: place.placeId,
-      placeName: place.mainText,
+      destinationName: place.mainText,
+      destinationCountry: this.getDestinationCountry(place),
       startDate,
       endDate,
     };
+  }
+
+  private getDestinationCountry(place: PlaceAutocompleteOption) {
+    const secondaryParts = place.secondaryText
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    return secondaryParts.at(-1) ?? place.secondaryText.trim();
   }
 
   private toUtcIsoDate(date: Date | null) {

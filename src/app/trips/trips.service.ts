@@ -1,7 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { AddTripRequest, ShareTripRequest, Trip, TripShare, UpdateTripShareRequest } from './trip.models';
+import {
+  AddTripRequest,
+  ShareTripRequest,
+  Trip,
+  TripRecommendation,
+  TripShare,
+  UpdateTripShareRequest,
+} from './trip.models';
 
 @Injectable({ providedIn: 'root' })
 export class TripsService {
@@ -13,6 +20,10 @@ export class TripsService {
 
   getTrips() {
     return this.http.get<Trip[]>('/api/Trips');
+  }
+
+  getTripRecommendations() {
+    return this.http.get<TripRecommendation[]>('/api/Trips/recommendations');
   }
 
   getTrip(id: string) {

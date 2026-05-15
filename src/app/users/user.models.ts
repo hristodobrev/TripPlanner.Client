@@ -4,3 +4,8 @@ export interface UserSearchResult {
   email: string;
 }
 
+export interface UserDashboard {
+  tripsCount: number;
+  visitedPlacesCount: number;
+  plannedPlacesCount: number;
+}
