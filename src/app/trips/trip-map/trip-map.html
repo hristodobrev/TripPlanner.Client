@@ -2,7 +2,7 @@
   <div class="trip-map-shell">
     <div #mapHost class="trip-map-canvas" aria-label="Map of trip places"></div>
 
-    @if (isEditable && !isLoadingMap() && places.length > 0) {
+    @if (isEditable && !isLoadingMap()) {
       <div class="trip-map-map-actions">
         <div class="trip-map-search-control" [class.open]="isSearchOpen()">
           @if (isSearchOpen()) {
